@@ -482,7 +482,9 @@ static struct object *keyed_wait_grab( struct d3dkmt_mutex *mutex, int key )
     if (!(wait = mem_alloc( sizeof(*wait) ))) return NULL;
     wait->key       = key;
     wait->waiters   = 1;
-    if (!(wait->sync = create_internal_sync( 0, 0 )))
+    /* A server-side object: in-process (msync) waits on internal syncs never
+     * wake for keyed mutexes, while server waits do. */
+    if (!(wait->sync = (struct object *)create_server_internal_sync( 0, 0 )))
     {
         free( wait );
         return NULL;
