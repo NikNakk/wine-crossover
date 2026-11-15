@@ -72,6 +72,13 @@ struct pe_module_loaded_params
     void *end;
 };
 
+/* macos-wine-xr: Proton's lsteamclient redirect */
+struct steamclient_setup_trampolines_params
+{
+    HMODULE src_mod;
+    HMODULE tgt_mod;
+};
+
 enum ntdll_unix_funcs
 {
     unix_load_so_dll,
@@ -85,6 +92,7 @@ enum ntdll_unix_funcs
 #if defined(__x86_64__)
     unix_pe_module_loaded,
 #endif
+    unix_steamclient_setup_trampolines,
 };
 
 extern unixlib_handle_t __wine_unixlib_handle;

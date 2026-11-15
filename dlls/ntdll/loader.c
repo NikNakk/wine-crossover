@@ -1149,6 +1149,36 @@ void * WINAPI RtlFindExportedRoutineByName( HMODULE module, const char *name )
 }
 
 
+/* macos-wine-xr: Proton's lsteamclient redirect. With MWXR_LSTEAMCLIENT=1, a game's
+ * Windows steamclient64.dll (or gameoverlayrenderer64.dll) is mapped but never run: its
+ * exports jump to lsteamclient.dll, which forwards to the host (macOS) Steam client. */
+#define MWXR_LDR_SKIP_INIT 0x20000000  /* Proton: LDR_DONT_CALL_DLLMAIN */
+
+static int use_lsteamclient(void)
+{
+    static int use = -1;
+    WCHAR env[8];
+
+    if (use == -1) use = get_env( L"MWXR_LSTEAMCLIENT", env, sizeof(env) ) && env[0] == '1';
+    return use;
+}
+
+/* name: a file name with or without its directory, len characters long */
+static BOOL is_steamclient_module( const WCHAR *name, ULONG len )
+{
+    static const WCHAR *names[] = { L"steamclient64", L"gameoverlayrenderer64" };
+    unsigned int i;
+    ULONG start;
+
+    for (start = len; start; start--) if (name[start - 1] == '\\' || name[start - 1] == '/') break;
+    name += start;
+    len -= start;
+    if (len >= 4 && !RtlCompareUnicodeStrings( name + len - 4, 4, L".dll", 4, TRUE )) len -= 4;
+    for (i = 0; i < ARRAY_SIZE(names); i++)
+        if (!RtlCompareUnicodeStrings( name, len, names[i], wcslen( names[i] ), TRUE )) return TRUE;
+    return FALSE;
+}
+
 /*************************************************************************
  *		import_dll
  *
@@ -1184,6 +1214,16 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
         WARN( "Skipping unused import %s\n", name );
         *pwm = NULL;
         return TRUE;
+    }
+
+    /* The redirected steamclient64.dll never runs, so don't load Steam's runtime for it. */
+    if (use_lsteamclient() && (!strcmp( name, "tier0_s64.dll" ) || !strcmp( name, "vstdlib_s64.dll" )) &&
+        wm->ldr.BaseDllName.Buffer &&
+        is_steamclient_module( wm->ldr.BaseDllName.Buffer, wm->ldr.BaseDllName.Length / sizeof(WCHAR) ))
+    {
+        TRACE( "%s -> ntdll.\n", name );
+        name = "ntdll.dll";
+        len = strlen( name );
     }
 
     status = build_import_name( wm, buffer, name, len );
@@ -1710,7 +1750,7 @@ static NTSTATUS MODULE_InitDLL( WINE_MODREF *wm, UINT reason, LPVOID lpReserved 
 
     /* Skip calls for modules loaded with special load flags */
 
-    if (wm->ldr.Flags & LDR_DONT_RESOLVE_REFS) return STATUS_SUCCESS;
+    if (wm->ldr.Flags & (LDR_DONT_RESOLVE_REFS | MWXR_LDR_SKIP_INIT)) return STATUS_SUCCESS;
     if (wm->ldr.TlsIndex == -1) call_tls_callbacks( wm->ldr.DllBase, reason );
     if (!entry) return STATUS_SUCCESS;
 
@@ -2309,6 +2349,26 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name, 
     wm->system = system;
 
     update_load_config( *module );
+
+    if (use_lsteamclient())
+    {
+        static HMODULE lsteamclient;
+        UNICODE_STRING lsteamclient_us;
+
+        if (is_steamclient_module( nt_name->Buffer, nt_name->Length / sizeof(WCHAR) ) &&
+            RtlCreateUnicodeStringFromAsciiz( &lsteamclient_us, "lsteamclient.dll" ) &&
+            (lsteamclient || LdrLoadDll( load_path, 0, &lsteamclient_us, &lsteamclient ) == STATUS_SUCCESS))
+        {
+            struct steamclient_setup_trampolines_params params = { .src_mod = *module, .tgt_mod = lsteamclient };
+            if (!WINE_UNIX_CALL( unix_steamclient_setup_trampolines, &params ))
+            {
+                NtFlushInstructionCache( NtCurrentProcess(), *module, map_size );
+                wm->ldr.Flags |= MWXR_LDR_SKIP_INIT;
+                TRACE( "%s redirected to lsteamclient\n", debugstr_us( nt_name ) );
+            }
+            RtlFreeUnicodeString( &lsteamclient_us );
+        }
+    }
 
     /* fixup imports */
 

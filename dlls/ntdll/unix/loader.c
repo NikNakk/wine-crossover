@@ -1402,6 +1402,8 @@ static NTSTATUS pe_module_loaded( void *args ) { return STATUS_NOT_IMPLEMENTED; 
 #endif
 
 
+static NTSTATUS steamclient_setup_trampolines( void *args );
+
 static const unixlib_entry_t unix_call_funcs[] =
 {
     load_so_dll,
@@ -1415,6 +1417,7 @@ static const unixlib_entry_t unix_call_funcs[] =
 #if defined(__x86_64__)
     pe_module_loaded,
 #endif
+    steamclient_setup_trampolines,
 };
 
 
@@ -1436,6 +1439,7 @@ static NTSTATUS wow64_unwind_builtin_dll( void *args ) { return STATUS_UNSUCCESS
 #if defined(__x86_64__)
 static NTSTATUS wow64_pe_module_loaded( void *args ) { return STATUS_NOT_IMPLEMENTED; }
 #endif
+static NTSTATUS wow64_steamclient_setup_trampolines( void *args ) { return STATUS_NOT_SUPPORTED; }
 
 const unixlib_entry_t unix_call_wow64_funcs[] =
 {
@@ -1450,6 +1454,7 @@ const unixlib_entry_t unix_call_wow64_funcs[] =
 #if defined(__x86_64__)
     wow64_pe_module_loaded,
 #endif
+    wow64_steamclient_setup_trampolines,
 };
 
 #endif  /* _WIN64 */
@@ -1901,6 +1906,64 @@ static const void *get_module_data_dir( HMODULE module, ULONG dir, ULONG *size )
     if (!data->VirtualAddress || !data->Size) return NULL;
     if (size) *size = data->Size;
     return get_rva( module, data->VirtualAddress );
+}
+
+
+/* macos-wine-xr: Proton's lsteamclient redirect (ValveSoftware/wine, proton_11.0,
+ * dlls/ntdll/unix/loader.c). Point each export of the mapped Windows steamclient64.dll,
+ * and its entry point, at the export of the same name in lsteamclient.dll, which
+ * forwards to the host Steam client. x86_64 only. */
+static void steamclient_write_jump( void *src_addr, ULONG_PTR tgt_addr )
+{
+    static const unsigned char mov[] = {0x48, 0xb8};   /* mov rax, imm64 */
+    static const unsigned char jmp[] = {0xff, 0xe0};   /* jmp rax */
+    memcpy( src_addr, mov, sizeof(mov) );
+    memcpy( (char *)src_addr + sizeof(mov), &tgt_addr, sizeof(tgt_addr) );
+    memcpy( (char *)src_addr + sizeof(mov) + sizeof(tgt_addr), jmp, sizeof(jmp) );
+}
+
+static NTSTATUS steamclient_setup_trampolines( void *args )
+{
+    struct steamclient_setup_trampolines_params *params = args;
+    HMODULE src_mod = params->src_mod, tgt_mod = params->tgt_mod;
+    IMAGE_NT_HEADERS *src_nt = get_rva( src_mod, ((IMAGE_DOS_HEADER *)src_mod)->e_lfanew );
+    IMAGE_NT_HEADERS *tgt_nt = get_rva( tgt_mod, ((IMAGE_DOS_HEADER *)tgt_mod)->e_lfanew );
+    IMAGE_SECTION_HEADER *src_sec = IMAGE_FIRST_SECTION( src_nt );
+    const IMAGE_EXPORT_DIRECTORY *src_exp, *tgt_exp;
+    UINT_PTR page_mask = getpagesize() - 1;
+    const DWORD *names;
+    void *src_addr, *tgt_addr;
+    unsigned int i;
+
+    if (src_nt->OptionalHeader.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC) return STATUS_NOT_SUPPORTED;
+    if (!(src_exp = get_module_data_dir( src_mod, IMAGE_FILE_EXPORT_DIRECTORY, NULL )) ||
+        !(tgt_exp = get_module_data_dir( tgt_mod, IMAGE_FILE_EXPORT_DIRECTORY, NULL )))
+        return STATUS_INVALID_IMAGE_FORMAT;
+
+    for (i = 0; i < src_nt->FileHeader.NumberOfSections; i++)
+    {
+        void *addr;
+        size_t size;
+        if (memcmp( src_sec[i].Name, ".text", 5 )) continue;
+        addr = (void *)(((UINT_PTR)src_mod + src_sec[i].VirtualAddress) & ~page_mask);
+        size = (src_sec[i].Misc.VirtualSize + page_mask) & ~page_mask;
+        mprotect( addr, size, PROT_READ | PROT_WRITE | PROT_EXEC );
+    }
+
+    names = get_rva( src_mod, src_exp->AddressOfNames );
+    for (i = 0; i < src_exp->NumberOfNames; i++)
+    {
+        const char *name;
+        if (!names[i] || !(name = get_rva( src_mod, names[i] ))) continue;
+        if (!(src_addr = (void *)find_named_export( src_mod, src_exp, name ))) continue;
+        if (!(tgt_addr = (void *)find_named_export( tgt_mod, tgt_exp, name ))) continue;
+        steamclient_write_jump( src_addr, (ULONG_PTR)tgt_addr );
+    }
+
+    src_addr = get_rva( src_mod, src_nt->OptionalHeader.AddressOfEntryPoint );
+    tgt_addr = get_rva( tgt_mod, tgt_nt->OptionalHeader.AddressOfEntryPoint );
+    steamclient_write_jump( src_addr, (ULONG_PTR)tgt_addr );
+    return STATUS_SUCCESS;
 }
 
 /***********************************************************************
