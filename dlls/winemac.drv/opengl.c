@@ -2141,6 +2141,11 @@ static BOOL macdrv_context_create(int format, void *shared, const int *attrib_li
                          flags & ~WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB);
                 break;
 
+            case WGL_CONTEXT_OPENGL_NO_ERROR_ARB:
+                /* A performance hint; CGL has no equivalent, so contexts always report errors. */
+                if (value) WARN("WGL_CONTEXT_OPENGL_NO_ERROR_ARB ignored\n");
+                break;
+
             case WGL_CONTEXT_PROFILE_MASK_ARB:
                 if (value != WGL_CONTEXT_CORE_PROFILE_BIT_ARB &&
                     value != WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB)
