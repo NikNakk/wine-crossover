@@ -89,7 +89,8 @@ enum ntdll_unix_funcs
     unix_wine_server_handle_to_fd,
     unix_wine_spawnvp,
     unix_system_time_precise,
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined(__i386__)
+    /* Reserve the native x86_64 slot for PE32 calls through WoW64 too. */
     unix_pe_module_loaded,
 #endif
     unix_steamclient_setup_trampolines,

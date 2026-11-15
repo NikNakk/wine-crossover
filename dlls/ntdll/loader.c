@@ -1166,7 +1166,7 @@ static int use_lsteamclient(void)
 /* name: a file name with or without its directory, len characters long */
 static BOOL is_steamclient_module( const WCHAR *name, ULONG len )
 {
-    static const WCHAR *names[] = { L"steamclient64", L"gameoverlayrenderer64" };
+    static const WCHAR *names[] = { L"steamclient64", L"gameoverlayrenderer64", L"steamclient", L"gameoverlayrenderer" };
     unsigned int i;
     ULONG start;
 
@@ -1217,7 +1217,8 @@ static BOOL import_dll( WINE_MODREF *wm, const IMAGE_IMPORT_DESCRIPTOR *descr, L
     }
 
     /* The redirected steamclient64.dll never runs, so don't load Steam's runtime for it. */
-    if (use_lsteamclient() && (!strcmp( name, "tier0_s64.dll" ) || !strcmp( name, "vstdlib_s64.dll" )) &&
+    if (use_lsteamclient() && (!strcmp( name, "tier0_s64.dll" ) || !strcmp( name, "vstdlib_s64.dll" ) ||
+                                    !strcmp( name, "tier0_s.dll" ) || !strcmp( name, "vstdlib_s.dll" )) &&
         wm->ldr.BaseDllName.Buffer &&
         is_steamclient_module( wm->ldr.BaseDllName.Buffer, wm->ldr.BaseDllName.Length / sizeof(WCHAR) ))
     {
@@ -2360,12 +2361,14 @@ static NTSTATUS build_module( LPCWSTR load_path, const UNICODE_STRING *nt_name, 
             (lsteamclient || LdrLoadDll( load_path, 0, &lsteamclient_us, &lsteamclient ) == STATUS_SUCCESS))
         {
             struct steamclient_setup_trampolines_params params = { .src_mod = *module, .tgt_mod = lsteamclient };
-            if (!WINE_UNIX_CALL( unix_steamclient_setup_trampolines, &params ))
+            NTSTATUS redirect_status = WINE_UNIX_CALL( unix_steamclient_setup_trampolines, &params );
+            if (!redirect_status)
             {
                 NtFlushInstructionCache( NtCurrentProcess(), *module, map_size );
                 wm->ldr.Flags |= MWXR_LDR_SKIP_INIT;
                 TRACE( "%s redirected to lsteamclient\n", debugstr_us( nt_name ) );
             }
+            else WARN( "Steam redirect failed for %s: %#lx\n", debugstr_us( nt_name ), redirect_status );
             RtlFreeUnicodeString( &lsteamclient_us );
         }
     }
