@@ -75,6 +75,17 @@ static CRITICAL_SECTION_DEBUG WININET_cs_debug =
 };
 static CRITICAL_SECTION WININET_cs = { &WININET_cs_debug, -1, 0, 0, 0, 0 };
 
+/* Guards every handle's children list and valid_handle. Applications connect and
+ * close from several threads on one InternetOpen handle at once. */
+static CRITICAL_SECTION children_cs;
+static CRITICAL_SECTION_DEBUG children_cs_debug =
+{
+    0, 0, &children_cs,
+    { &children_cs_debug.ProcessLocksList, &children_cs_debug.ProcessLocksList },
+      0, 0, { (DWORD_PTR)(__FILE__ ": children_cs") }
+};
+static CRITICAL_SECTION children_cs = { &children_cs_debug, -1, 0, 0, 0, 0 };
+
 static object_header_t **handle_table;
 static UINT_PTR next_handle;
 static UINT_PTR handle_table_size;
@@ -219,12 +230,22 @@ object_header_t *get_handle_object( HINTERNET hinternet )
     return info;
 }
 
+void add_child_object(object_header_t *parent, object_header_t *child)
+{
+    EnterCriticalSection( &children_cs );
+    list_add_head( &parent->children, &child->entry );
+    LeaveCriticalSection( &children_cs );
+}
+
 static void invalidate_handle(object_header_t *info)
 {
     object_header_t *child, *next;
 
-    if(!info->valid_handle)
+    EnterCriticalSection( &children_cs );
+    if(!info->valid_handle) {
+        LeaveCriticalSection( &children_cs );
         return;
+    }
     info->valid_handle = FALSE;
 
     /* Free all children as native does */
@@ -233,6 +254,7 @@ static void invalidate_handle(object_header_t *info)
         TRACE("invalidating child handle %p for parent %p\n", child->hInternet, info);
         invalidate_handle( child );
     }
+    LeaveCriticalSection( &children_cs );
 
     WININET_Release(info);
 }
@@ -259,7 +281,11 @@ BOOL WININET_Release( object_header_t *info )
         }
         TRACE( "destroying object %p\n", info);
         if ( info->htype != WH_HINIT )
+        {
+            EnterCriticalSection( &children_cs );
             list_remove( &info->entry );
+            LeaveCriticalSection( &children_cs );
+        }
         info->vtbl->Destroy( info );
 
         if(info->hInternet) {

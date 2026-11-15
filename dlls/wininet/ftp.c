@@ -1350,7 +1350,7 @@ static HINTERNET FTP_FtpOpenFileW(ftp_session_t *lpwfs,
 
         WININET_AddRef( &lpwfs->hdr );
         lpwh->lpFtpSession = lpwfs;
-        list_add_head( &lpwfs->hdr.children, &lpwh->hdr.entry );
+        add_child_object( &lpwfs->hdr, &lpwh->hdr );
 	
 	/* Indicate that a download is currently in progress */
 	lpwfs->download_in_progress = lpwh;
@@ -2470,7 +2470,7 @@ HINTERNET FTP_Connect(appinfo_t *hIC, LPCWSTR lpszServerName,
 
     WININET_AddRef( &hIC->hdr );
     lpwfs->lpAppInfo = hIC;
-    list_add_head( &hIC->hdr.children, &lpwfs->hdr.entry );
+    add_child_object( &hIC->hdr, &lpwfs->hdr );
 
     if(hIC->proxy && hIC->accessType == INTERNET_OPEN_TYPE_PROXY) {
         if(wcschr(hIC->proxy, ' '))
@@ -3566,7 +3566,7 @@ static HINTERNET FTP_ReceiveFileList(ftp_session_t *lpwfs, INT nSocket, LPCWSTR 
 
             WININET_AddRef( &lpwfs->hdr );
             lpwfn->lpFtpSession = lpwfs;
-            list_add_head( &lpwfs->hdr.children, &lpwfn->hdr.entry );
+            add_child_object( &lpwfs->hdr, &lpwfn->hdr );
         }
     }
 

@@ -3487,7 +3487,7 @@ static DWORD HTTP_HttpOpenRequestW(http_session_t *session,
 
     WININET_AddRef( &session->hdr );
     request->session = session;
-    list_add_head( &session->hdr.children, &request->hdr.entry );
+    add_child_object( &session->hdr, &request->hdr );
 
     port = session->hostPort;
     if (port == INTERNET_INVALID_PORT_NUMBER)
@@ -5942,7 +5942,7 @@ DWORD HTTP_Connect(appinfo_t *hIC, LPCWSTR lpszServerName,
 
     WININET_AddRef( &hIC->hdr );
     session->appInfo = hIC;
-    list_add_head( &hIC->hdr.children, &session->hdr.entry );
+    add_child_object( &hIC->hdr, &session->hdr );
 
     session->hostName = wcsdup(lpszServerName);
     if (lpszUserName && lpszUserName[0])

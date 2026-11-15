@@ -361,6 +361,7 @@ struct task_header_t
 void *alloc_async_task(object_header_t*,async_task_proc_t,size_t);
 
 void *alloc_object(object_header_t*,const object_vtbl_t*,size_t);
+void add_child_object(object_header_t*,object_header_t*);
 object_header_t *get_handle_object( HINTERNET hinternet );
 object_header_t *WININET_AddRef( object_header_t *info );
 BOOL WININET_Release( object_header_t *info );
