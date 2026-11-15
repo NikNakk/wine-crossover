@@ -524,34 +524,222 @@ static HRESULT create_texture(ID3D11Device *device, const void *data, SIZE_T siz
     return hr;
 }
 
+/* Reads a whole file into a buffer the caller frees. */
+static HRESULT load_file(const WCHAR *filename, void **data, DWORD *size)
+{
+    DWORD read_len;
+    HANDLE file;
+    BOOL ret;
+
+    file = CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL, NULL);
+    if (file == INVALID_HANDLE_VALUE)
+        return D3D11_ERROR_FILE_NOT_FOUND;
+
+    *size = GetFileSize(file, NULL);
+    if (*size == INVALID_FILE_SIZE || !(*data = malloc(*size ? *size : 1)))
+    {
+        CloseHandle(file);
+        return E_FAIL;
+    }
+
+    ret = ReadFile(file, *data, *size, &read_len, NULL);
+    CloseHandle(file);
+    if (!ret || read_len != *size)
+    {
+        WARN("Failed to read file %s.\n", debugstr_w(filename));
+        free(*data);
+        *data = NULL;
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+static WCHAR *filename_to_wide(const char *filename)
+{
+    WCHAR *wide;
+    int len;
+
+    len = MultiByteToWideChar(CP_ACP, 0, filename, -1, NULL, 0);
+    if (!len || !(wide = malloc(len * sizeof(*wide))))
+        return NULL;
+    MultiByteToWideChar(CP_ACP, 0, filename, -1, wide, len);
+    return wide;
+}
+
+static HRESULT create_texture_from_file(ID3D11Device *device, const WCHAR *filename,
+        D3DX11_IMAGE_LOAD_INFO *load_info, ID3D11Resource **texture)
+{
+    DWORD size;
+    void *data;
+    HRESULT hr;
+
+    if (FAILED(hr = load_file(filename, &data, &size)))
+        return hr;
+    hr = create_texture(device, data, size, load_info, texture);
+    free(data);
+    return hr;
+}
+
+/* A view of the whole texture, as native d3dx11 makes it (no view description). */
+static HRESULT create_view(ID3D11Device *device, ID3D11Resource *texture, HRESULT hr,
+        ID3D11ShaderResourceView **view)
+{
+    if (FAILED(hr))
+        return hr;
+    hr = ID3D11Device_CreateShaderResourceView(device, texture, NULL, view);
+    ID3D11Resource_Release(texture);
+    return hr;
+}
+
 HRESULT WINAPI D3DX11CreateShaderResourceViewFromMemory(ID3D11Device *device, const void *data,
         SIZE_T data_size, D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump,
         ID3D11ShaderResourceView **view, HRESULT *hresult)
 {
-    FIXME("device %p, data %p, data_size %Iu, load_info %p, pump %p, view %p, hresult %p stub!\n",
+    ID3D11Resource *texture = NULL;
+    HRESULT hr;
+
+    TRACE("device %p, data %p, data_size %Iu, load_info %p, pump %p, view %p, hresult %p.\n",
             device, data, data_size, load_info, pump, view, hresult);
 
-    return E_NOTIMPL;
+    if (!device || !view)
+        return E_INVALIDARG;
+    if (!data)
+        return E_FAIL;
+    if (pump)
+        FIXME("D3DX11 thread pump is currently unimplemented.\n");
+
+    hr = create_texture(device, data, data_size, load_info, &texture);
+    hr = create_view(device, texture, hr, view);
+    if (hresult)
+        *hresult = hr;
+    return hr;
 }
 
-HRESULT WINAPI D3DX11CreateTextureFromFileA(ID3D11Device *device, const char *filename,
-        D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump, ID3D11Resource **texture,
+HRESULT WINAPI D3DX11CreateShaderResourceViewFromFileW(ID3D11Device *device, const WCHAR *filename,
+        D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump, ID3D11ShaderResourceView **view,
         HRESULT *hresult)
 {
-    FIXME("device %p, filename %s, load_info %p, pump %p, texture %p, hresult %p stub.\n",
-            device, debugstr_a(filename), load_info, pump, texture, hresult);
+    ID3D11Resource *texture = NULL;
+    HRESULT hr;
 
-    return E_NOTIMPL;
+    TRACE("device %p, filename %s, load_info %p, pump %p, view %p, hresult %p.\n",
+            device, debugstr_w(filename), load_info, pump, view, hresult);
+
+    if (!device || !view)
+        return E_INVALIDARG;
+    if (!filename)
+        return E_FAIL;
+    if (pump)
+        FIXME("D3DX11 thread pump is currently unimplemented.\n");
+
+    hr = create_texture_from_file(device, filename, load_info, &texture);
+    hr = create_view(device, texture, hr, view);
+    if (hresult)
+        *hresult = hr;
+    return hr;
+}
+
+HRESULT WINAPI D3DX11CreateShaderResourceViewFromFileA(ID3D11Device *device, const char *filename,
+        D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump, ID3D11ShaderResourceView **view,
+        HRESULT *hresult)
+{
+    WCHAR *wide;
+    HRESULT hr;
+
+    TRACE("device %p, filename %s, load_info %p, pump %p, view %p, hresult %p.\n",
+            device, debugstr_a(filename), load_info, pump, view, hresult);
+
+    if (!filename)
+        return E_FAIL;
+    if (!(wide = filename_to_wide(filename)))
+        return E_OUTOFMEMORY;
+    hr = D3DX11CreateShaderResourceViewFromFileW(device, wide, load_info, pump, view, hresult);
+    free(wide);
+    return hr;
 }
 
 HRESULT WINAPI D3DX11CreateTextureFromFileW(ID3D11Device *device, const WCHAR *filename,
         D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump, ID3D11Resource **texture,
         HRESULT *hresult)
 {
-    FIXME("device %p, filename %s, load_info %p, pump %p, texture %p, hresult %p stub.\n",
+    HRESULT hr;
+
+    TRACE("device %p, filename %s, load_info %p, pump %p, texture %p, hresult %p.\n",
             device, debugstr_w(filename), load_info, pump, texture, hresult);
 
-    return E_NOTIMPL;
+    if (!device || !texture)
+        return E_INVALIDARG;
+    if (!filename)
+        return E_FAIL;
+    if (pump)
+        FIXME("D3DX11 thread pump is currently unimplemented.\n");
+
+    hr = create_texture_from_file(device, filename, load_info, texture);
+    if (hresult)
+        *hresult = hr;
+    return hr;
+}
+
+HRESULT WINAPI D3DX11CreateTextureFromFileA(ID3D11Device *device, const char *filename,
+        D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump, ID3D11Resource **texture,
+        HRESULT *hresult)
+{
+    WCHAR *wide;
+    HRESULT hr;
+
+    TRACE("device %p, filename %s, load_info %p, pump %p, texture %p, hresult %p.\n",
+            device, debugstr_a(filename), load_info, pump, texture, hresult);
+
+    if (!filename)
+        return E_FAIL;
+    if (!(wide = filename_to_wide(filename)))
+        return E_OUTOFMEMORY;
+    hr = D3DX11CreateTextureFromFileW(device, wide, load_info, pump, texture, hresult);
+    free(wide);
+    return hr;
+}
+
+HRESULT WINAPI D3DX11GetImageInfoFromFileW(const WCHAR *filename, ID3DX11ThreadPump *pump,
+        D3DX11_IMAGE_INFO *img_info, HRESULT *hresult)
+{
+    DWORD size;
+    void *data;
+    HRESULT hr;
+
+    TRACE("filename %s, pump %p, img_info %p, hresult %p.\n", debugstr_w(filename), pump, img_info, hresult);
+
+    if (!filename)
+        return E_FAIL;
+    if (pump)
+        FIXME("D3DX11 thread pump is currently unimplemented.\n");
+
+    if (SUCCEEDED(hr = load_file(filename, &data, &size)))
+    {
+        hr = get_image_info(data, size, img_info);
+        free(data);
+    }
+    if (hresult)
+        *hresult = hr;
+    return hr;
+}
+
+HRESULT WINAPI D3DX11GetImageInfoFromFileA(const char *filename, ID3DX11ThreadPump *pump,
+        D3DX11_IMAGE_INFO *img_info, HRESULT *hresult)
+{
+    WCHAR *wide;
+    HRESULT hr;
+
+    TRACE("filename %s, pump %p, img_info %p, hresult %p.\n", debugstr_a(filename), pump, img_info, hresult);
+
+    if (!filename)
+        return E_FAIL;
+    if (!(wide = filename_to_wide(filename)))
+        return E_OUTOFMEMORY;
+    hr = D3DX11GetImageInfoFromFileW(wide, pump, img_info, hresult);
+    free(wide);
+    return hr;
 }
 
 HRESULT WINAPI D3DX11CreateTextureFromResourceA(ID3D11Device *device, HMODULE module, const char *resource,

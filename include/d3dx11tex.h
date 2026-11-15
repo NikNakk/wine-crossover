@@ -137,6 +137,12 @@ typedef struct _D3DX11_TEXTURE_LOAD_INFO
 extern "C" {
 #endif
 
+HRESULT WINAPI D3DX11CreateShaderResourceViewFromFileA(ID3D11Device *device, const char *filename,
+        D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump, ID3D11ShaderResourceView **view,
+        HRESULT *hresult);
+HRESULT WINAPI D3DX11CreateShaderResourceViewFromFileW(ID3D11Device *device, const WCHAR *filename,
+        D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump, ID3D11ShaderResourceView **view,
+        HRESULT *hresult);
 HRESULT WINAPI D3DX11CreateShaderResourceViewFromMemory(ID3D11Device *device, const void *data,
         SIZE_T data_size, D3DX11_IMAGE_LOAD_INFO *load_info, ID3DX11ThreadPump *pump,
         ID3D11ShaderResourceView **view, HRESULT *hresult);

@@ -3564,18 +3564,17 @@ static void test_get_image_info(void)
     ok(hr2 == 0xdeadbeef, "Got unexpected hr2 %#lx.\n", hr2);
     hr2 = 0xdeadbeef;
     hr = D3DX11GetImageInfoFromFileW(L"deadbeaf", NULL, &image_info, &hr2);
-    todo_wine ok(hr == D3D11_ERROR_FILE_NOT_FOUND, "Got unexpected hr %#lx.\n", hr);
-    todo_wine ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
+    ok(hr == D3D11_ERROR_FILE_NOT_FOUND, "Got unexpected hr %#lx.\n", hr);
+    ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
     hr2 = 0xdeadbeef;
     hr = D3DX11GetImageInfoFromFileA(NULL, NULL, &image_info, &hr2);
     ok(hr == E_FAIL, "Got unexpected hr %#lx.\n", hr);
     ok(hr2 == 0xdeadbeef, "Got unexpected hr2 %#lx.\n", hr2);
     hr2 = 0xdeadbeef;
     hr = D3DX11GetImageInfoFromFileA("deadbeaf", NULL, &image_info, &hr2);
-    todo_wine ok(hr == D3D11_ERROR_FILE_NOT_FOUND, "Got unexpected hr %#lx.\n", hr);
-    todo_wine ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
+    ok(hr == D3D11_ERROR_FILE_NOT_FOUND, "Got unexpected hr %#lx.\n", hr);
+    ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
 
-todo_wine {
     for (i = 0; i < ARRAY_SIZE(test_image); ++i)
     {
         winetest_push_context("Test %u", i);
@@ -3600,7 +3599,6 @@ todo_wine {
         delete_file(test_filename);
         winetest_pop_context();
     }
-}
 
     check_dds_pixel_format(DDS_PF_FOURCC, MAKEFOURCC('D','X','T','1'), 0, 0, 0, 0, 0, DXGI_FORMAT_BC1_UNORM);
     check_dds_pixel_format(DDS_PF_FOURCC, MAKEFOURCC('D','X','T','2'), 0, 0, 0, 0, 0, DXGI_FORMAT_BC2_UNORM);
@@ -3744,6 +3742,7 @@ static void test_create_texture(void)
     D3DX11_IMAGE_LOAD_INFO load_info;
     D3DX11_IMAGE_INFO img_info;
     unsigned int i, mip_level;
+    ID3D11ShaderResourceView *view;
     ID3D11Resource *resource;
     ID3D11Texture2D *tex_2d;
     HMODULE resource_module;
@@ -3983,14 +3982,6 @@ static void test_create_texture(void)
     check_resource_data(resource, test_image, __LINE__);
     ID3D11Resource_Release(resource);
 
-    if (!strcmp(winetest_platform, "wine"))
-    {
-        skip("Skipping D3DX11CreateTextureFrom{File,Resource} tests.\n");
-        CoUninitialize();
-        ok(!ID3D11Device_Release(device), "Unexpected refcount.\n");
-        return;
-    }
-
     /* D3DX11CreateTextureFromFile tests */
 
     hr2 = 0xdeadbeef;
@@ -4007,6 +3998,10 @@ static void test_create_texture(void)
     ok(hr2 == 0xdeadbeef, "Got unexpected hr2 %#lx.\n", hr2);
     hr2 = 0xdeadbeef;
     hr = D3DX11CreateTextureFromFileA(device, "deadbeef", NULL, NULL, &resource, &hr2);
+    ok(hr == D3D11_ERROR_FILE_NOT_FOUND, "Got unexpected hr %#lx.\n", hr);
+    ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
+    hr2 = 0xdeadbeef;
+    hr = D3DX11CreateShaderResourceViewFromFileW(device, L"deadbeef", NULL, NULL, &view, &hr2);
     ok(hr == D3D11_ERROR_FILE_NOT_FOUND, "Got unexpected hr %#lx.\n", hr);
     ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
 
@@ -4038,6 +4033,28 @@ static void test_create_texture(void)
             check_resource_data(resource, test_image + i, __LINE__);
             ID3D11Resource_Release(resource);
         }
+
+        hr2 = 0xdeadbeef;
+        hr = D3DX11CreateShaderResourceViewFromFileW(device, path, NULL, NULL, &view, &hr2);
+        ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
+        ok(hr == S_OK || broken(hr == E_FAIL && test_image[i].expected_info.ImageFileFormat == D3DX11_IFF_WMP),
+                "Got unexpected hr %#lx.\n", hr);
+        if (hr == S_OK)
+        {
+            ID3D11ShaderResourceView_GetResource(view, &resource);
+            check_resource_info(resource, test_image + i, __LINE__);
+            check_resource_data(resource, test_image + i, __LINE__);
+            ID3D11Resource_Release(resource);
+            ID3D11ShaderResourceView_Release(view);
+        }
+
+        hr2 = 0xdeadbeef;
+        hr = D3DX11CreateShaderResourceViewFromFileA(device, get_str_a(path), NULL, NULL, &view, &hr2);
+        ok(hr == hr2, "Got unexpected hr2 %#lx.\n", hr2);
+        ok(hr == S_OK || broken(hr == E_FAIL && test_image[i].expected_info.ImageFileFormat == D3DX11_IFF_WMP),
+                "Got unexpected hr %#lx.\n", hr);
+        if (hr == S_OK)
+            ID3D11ShaderResourceView_Release(view);
 
         delete_file(test_filename);
         winetest_pop_context();
@@ -4099,6 +4116,14 @@ static void test_create_texture(void)
 
         delete_file(test_filename);
         winetest_pop_context();
+    }
+
+    if (!strcmp(winetest_platform, "wine"))
+    {
+        skip("Skipping D3DX11CreateTextureFromResource tests.\n");
+        CoUninitialize();
+        ok(!ID3D11Device_Release(device), "Unexpected refcount.\n");
+        return;
     }
 
     /* D3DX11CreateTextureFromResource tests */
