@@ -3207,6 +3207,70 @@ typedef struct VkExportMemoryWin32HandleInfoKHR32
     PTR32 name;
 } VkExportMemoryWin32HandleInfoKHR32;
 
+typedef struct VkExportMetalBufferInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    VkDeviceMemory DECLSPEC_ALIGN(8) memory;
+    MTLBuffer_id mtlBuffer;
+} VkExportMetalBufferInfoEXT32;
+
+typedef struct VkExportMetalCommandQueueInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    PTR32 queue;
+    MTLCommandQueue_id mtlCommandQueue;
+} VkExportMetalCommandQueueInfoEXT32;
+
+typedef struct VkExportMetalDeviceInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    MTLDevice_id mtlDevice;
+} VkExportMetalDeviceInfoEXT32;
+
+typedef struct VkExportMetalIOSurfaceInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    VkImage DECLSPEC_ALIGN(8) image;
+    IOSurfaceRef ioSurface;
+} VkExportMetalIOSurfaceInfoEXT32;
+
+typedef struct VkExportMetalObjectCreateInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    VkExportMetalObjectTypeFlagBitsEXT exportObjectType;
+} VkExportMetalObjectCreateInfoEXT32;
+
+typedef struct VkExportMetalObjectsInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+} VkExportMetalObjectsInfoEXT32;
+
+typedef struct VkExportMetalSharedEventInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    VkSemaphore DECLSPEC_ALIGN(8) semaphore;
+    VkEvent DECLSPEC_ALIGN(8) event;
+    MTLSharedEvent_id mtlSharedEvent;
+} VkExportMetalSharedEventInfoEXT32;
+
+typedef struct VkExportMetalTextureInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    VkImage DECLSPEC_ALIGN(8) image;
+    VkImageView DECLSPEC_ALIGN(8) imageView;
+    VkBufferView DECLSPEC_ALIGN(8) bufferView;
+    VkImageAspectFlagBits plane;
+    MTLTexture_id mtlTexture;
+} VkExportMetalTextureInfoEXT32;
+
 typedef struct VkExportSemaphoreCreateInfo32
 {
     VkStructureType sType;
@@ -3764,6 +3828,35 @@ typedef struct VkImportMemoryWin32HandleInfoKHR32
     PTR32 handle;
     PTR32 name;
 } VkImportMemoryWin32HandleInfoKHR32;
+
+typedef struct VkImportMetalBufferInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    MTLBuffer_id mtlBuffer;
+} VkImportMetalBufferInfoEXT32;
+
+typedef struct VkImportMetalIOSurfaceInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    IOSurfaceRef ioSurface;
+} VkImportMetalIOSurfaceInfoEXT32;
+
+typedef struct VkImportMetalSharedEventInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    MTLSharedEvent_id mtlSharedEvent;
+} VkImportMetalSharedEventInfoEXT32;
+
+typedef struct VkImportMetalTextureInfoEXT32
+{
+    VkStructureType sType;
+    PTR32 pNext;
+    VkImageAspectFlagBits plane;
+    MTLTexture_id mtlTexture;
+} VkImportMetalTextureInfoEXT32;
 
 typedef struct VkImportSemaphoreWin32HandleInfoKHR32
 {
@@ -10038,6 +10131,17 @@ static void convert_VkMemoryAllocateInfo_win64_to_host(struct conversion_context
             out_header = (void *)out_ext;
             break;
         }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT *in_ext = (const VkExportMetalObjectCreateInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT:
         {
             VkImportMemoryHostPointerInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -10059,6 +10163,17 @@ static void convert_VkMemoryAllocateInfo_win64_to_host(struct conversion_context
             out_ext->handleType = in_ext->handleType;
             out_ext->handle = in_ext->handle;
             out_ext->name = in_ext->name;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT:
+        {
+            VkImportMetalBufferInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalBufferInfoEXT *in_ext = (const VkImportMetalBufferInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->mtlBuffer = in_ext->mtlBuffer;
             out_header->pNext = (void *)out_ext;
             out_header = (void *)out_ext;
             break;
@@ -10205,6 +10320,17 @@ static void convert_VkMemoryAllocateInfo_win32_to_host(struct conversion_context
             out_header = (void *)out_ext;
             break;
         }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT32 *in_ext = (const VkExportMetalObjectCreateInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_IMPORT_MEMORY_HOST_POINTER_INFO_EXT:
         {
             VkImportMemoryHostPointerInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -10226,6 +10352,17 @@ static void convert_VkMemoryAllocateInfo_win32_to_host(struct conversion_context
             out_ext->handleType = in_ext->handleType;
             out_ext->handle = (HANDLE)UlongToPtr(in_ext->handle);
             out_ext->name = (LPCWSTR)UlongToPtr(in_ext->name);
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT:
+        {
+            VkImportMetalBufferInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalBufferInfoEXT32 *in_ext = (const VkImportMetalBufferInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->mtlBuffer = in_ext->mtlBuffer;
             out_header->pNext = (void *)out_ext;
             out_header = (void *)out_ext;
             break;
@@ -15859,6 +15996,17 @@ static void convert_VkBufferViewCreateInfo_win32_to_host(struct conversion_conte
             out_ext->sType = VK_STRUCTURE_TYPE_BUFFER_USAGE_FLAGS_2_CREATE_INFO;
             out_ext->pNext = NULL;
             out_ext->usage = in_ext->usage;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT32 *in_ext = (const VkExportMetalObjectCreateInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
             out_header->pNext = (void *)out_ext;
             out_header = (void *)out_ext;
             break;
@@ -22916,15 +23064,48 @@ static void convert_VkDeviceCreateInfo_win32_to_host(struct conversion_context *
     }
 }
 
-static void convert_VkEventCreateInfo_win32_to_host(const VkEventCreateInfo32 *in, VkEventCreateInfo *out)
+static void convert_VkEventCreateInfo_win32_to_host(struct conversion_context *ctx, const VkEventCreateInfo32 *in, VkEventCreateInfo *out)
 {
+    const VkBaseInStructure32 *in_header;
+    VkBaseOutStructure *out_header = (void *)out;
+
     if (!in) return;
 
     out->sType = in->sType;
     out->pNext = NULL;
     out->flags = in->flags;
-    if (in->pNext)
-        FIXME("Unexpected pNext\n");
+
+    for (in_header = UlongToPtr(in->pNext); in_header; in_header = UlongToPtr(in_header->pNext))
+    {
+        switch (in_header->sType)
+        {
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT32 *in_ext = (const VkExportMetalObjectCreateInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_SHARED_EVENT_INFO_EXT:
+        {
+            VkImportMetalSharedEventInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalSharedEventInfoEXT32 *in_ext = (const VkImportMetalSharedEventInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_SHARED_EVENT_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->mtlSharedEvent = in_ext->mtlSharedEvent;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        default:
+            FIXME("Unhandled sType %u.\n", in_header->sType);
+            break;
+        }
+    }
 }
 
 #ifdef _WIN64
@@ -24461,6 +24642,17 @@ static void convert_VkImageCreateInfo_win64_to_host(struct conversion_context *c
             out_header = (void *)out_ext;
             break;
         }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT *in_ext = (const VkExportMetalObjectCreateInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO:
         {
             VkExternalMemoryImageCreateInfo *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -24526,6 +24718,29 @@ static void convert_VkImageCreateInfo_win64_to_host(struct conversion_context *c
             out_ext->sType = VK_STRUCTURE_TYPE_IMAGE_SWAPCHAIN_CREATE_INFO_KHR;
             out_ext->pNext = NULL;
             out_ext->swapchain = in_ext->swapchain ? vulkan_swapchain_from_handle(in_ext->swapchain)->host.swapchain : 0;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_IO_SURFACE_INFO_EXT:
+        {
+            VkImportMetalIOSurfaceInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalIOSurfaceInfoEXT *in_ext = (const VkImportMetalIOSurfaceInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_IO_SURFACE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->ioSurface = in_ext->ioSurface;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_TEXTURE_INFO_EXT:
+        {
+            VkImportMetalTextureInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalTextureInfoEXT *in_ext = (const VkImportMetalTextureInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_TEXTURE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->plane = in_ext->plane;
+            out_ext->mtlTexture = in_ext->mtlTexture;
             out_header->pNext = (void *)out_ext;
             out_header = (void *)out_ext;
             break;
@@ -24610,6 +24825,17 @@ static void convert_VkImageCreateInfo_win32_to_host(struct conversion_context *c
             out_header = (void *)out_ext;
             break;
         }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT32 *in_ext = (const VkExportMetalObjectCreateInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_EXTERNAL_MEMORY_IMAGE_CREATE_INFO:
         {
             VkExternalMemoryImageCreateInfo *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -24679,6 +24905,29 @@ static void convert_VkImageCreateInfo_win32_to_host(struct conversion_context *c
             out_header = (void *)out_ext;
             break;
         }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_IO_SURFACE_INFO_EXT:
+        {
+            VkImportMetalIOSurfaceInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalIOSurfaceInfoEXT32 *in_ext = (const VkImportMetalIOSurfaceInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_IO_SURFACE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->ioSurface = in_ext->ioSurface;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_TEXTURE_INFO_EXT:
+        {
+            VkImportMetalTextureInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalTextureInfoEXT32 *in_ext = (const VkImportMetalTextureInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_TEXTURE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->plane = in_ext->plane;
+            out_ext->mtlTexture = in_ext->mtlTexture;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_OPAQUE_CAPTURE_DESCRIPTOR_DATA_CREATE_INFO_EXT:
         {
             VkOpaqueCaptureDescriptorDataCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -24740,6 +24989,17 @@ static void convert_VkImageViewCreateInfo_win32_to_host(struct conversion_contex
     {
         switch (in_header->sType)
         {
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT32 *in_ext = (const VkExportMetalObjectCreateInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_IMAGE_VIEW_ASTC_DECODE_MODE_EXT:
         {
             VkImageViewASTCDecodeModeEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -25128,6 +25388,17 @@ static void convert_VkInstanceCreateInfo_win64_to_host(struct conversion_context
             out_header = (void *)out_ext;
             break;
         }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT *in_ext = (const VkExportMetalObjectCreateInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_LAYER_SETTINGS_CREATE_INFO_EXT:
         {
             VkLayerSettingsCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -25278,6 +25549,17 @@ static void convert_VkInstanceCreateInfo_win32_to_host(struct conversion_context
             out_ext->messageType = in_ext->messageType;
             out_ext->pfnUserCallback = (PFN_vkDebugUtilsMessengerCallbackEXT)UlongToPtr(in_ext->pfnUserCallback);
             out_ext->pUserData = UlongToPtr(in_ext->pUserData);
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT32 *in_ext = (const VkExportMetalObjectCreateInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
             out_header->pNext = (void *)out_ext;
             out_header = (void *)out_ext;
             break;
@@ -26841,6 +27123,17 @@ static void convert_VkSemaphoreCreateInfo_win64_to_host(struct conversion_contex
     {
         switch (in_header->sType)
         {
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT *in_ext = (const VkExportMetalObjectCreateInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO:
         {
             VkExportSemaphoreCreateInfo *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -26861,6 +27154,17 @@ static void convert_VkSemaphoreCreateInfo_win64_to_host(struct conversion_contex
             out_ext->pAttributes = in_ext->pAttributes;
             out_ext->dwAccess = in_ext->dwAccess;
             out_ext->name = in_ext->name;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_SHARED_EVENT_INFO_EXT:
+        {
+            VkImportMetalSharedEventInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalSharedEventInfoEXT *in_ext = (const VkImportMetalSharedEventInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_SHARED_EVENT_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->mtlSharedEvent = in_ext->mtlSharedEvent;
             out_header->pNext = (void *)out_ext;
             out_header = (void *)out_ext;
             break;
@@ -26911,6 +27215,17 @@ static void convert_VkSemaphoreCreateInfo_win32_to_host(struct conversion_contex
     {
         switch (in_header->sType)
         {
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT:
+        {
+            VkExportMetalObjectCreateInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalObjectCreateInfoEXT32 *in_ext = (const VkExportMetalObjectCreateInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->exportObjectType = in_ext->exportObjectType;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
         case VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO:
         {
             VkExportSemaphoreCreateInfo *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
@@ -26931,6 +27246,17 @@ static void convert_VkSemaphoreCreateInfo_win32_to_host(struct conversion_contex
             out_ext->pAttributes = convert_SECURITY_ATTRIBUTES_array_win32_to_host(ctx, (const SECURITY_ATTRIBUTES32 *)UlongToPtr(in_ext->pAttributes), 1);
             out_ext->dwAccess = in_ext->dwAccess;
             out_ext->name = (LPCWSTR)UlongToPtr(in_ext->name);
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_IMPORT_METAL_SHARED_EVENT_INFO_EXT:
+        {
+            VkImportMetalSharedEventInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkImportMetalSharedEventInfoEXT32 *in_ext = (const VkImportMetalSharedEventInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_IMPORT_METAL_SHARED_EVENT_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->mtlSharedEvent = in_ext->mtlSharedEvent;
             out_header->pNext = (void *)out_ext;
             out_header = (void *)out_ext;
             break;
@@ -28054,6 +28380,247 @@ static void convert_VkPerformanceCounterDescriptionKHR_array_host_to_win32(const
     {
         convert_VkPerformanceCounterDescriptionKHR_host_to_win32(&in[i], &out[i]);
     }
+}
+
+#ifdef _WIN64
+static void convert_VkExportMetalObjectsInfoEXT_win64_to_host(struct conversion_context *ctx, const VkExportMetalObjectsInfoEXT *in, VkExportMetalObjectsInfoEXT *out)
+{
+    const VkBaseInStructure *in_header;
+    VkBaseOutStructure *out_header = (void *)out;
+
+    if (!in) return;
+
+    out->sType = in->sType;
+    out->pNext = NULL;
+
+    for (in_header = (void *)in->pNext; in_header; in_header = (void *)in_header->pNext)
+    {
+        switch (in_header->sType)
+        {
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_BUFFER_INFO_EXT:
+        {
+            VkExportMetalBufferInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalBufferInfoEXT *in_ext = (const VkExportMetalBufferInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_BUFFER_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->memory = vulkan_device_memory_from_handle(in_ext->memory)->host.device_memory;
+            out_ext->mtlBuffer = in_ext->mtlBuffer;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_COMMAND_QUEUE_INFO_EXT:
+        {
+            VkExportMetalCommandQueueInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalCommandQueueInfoEXT *in_ext = (const VkExportMetalCommandQueueInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_COMMAND_QUEUE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->queue = vulkan_queue_from_handle(in_ext->queue)->host.queue;
+            out_ext->mtlCommandQueue = in_ext->mtlCommandQueue;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_DEVICE_INFO_EXT:
+        {
+            VkExportMetalDeviceInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalDeviceInfoEXT *in_ext = (const VkExportMetalDeviceInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_DEVICE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->mtlDevice = in_ext->mtlDevice;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_IO_SURFACE_INFO_EXT:
+        {
+            VkExportMetalIOSurfaceInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalIOSurfaceInfoEXT *in_ext = (const VkExportMetalIOSurfaceInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_IO_SURFACE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->image = in_ext->image;
+            out_ext->ioSurface = in_ext->ioSurface;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT:
+        {
+            VkExportMetalSharedEventInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalSharedEventInfoEXT *in_ext = (const VkExportMetalSharedEventInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->semaphore = in_ext->semaphore ? vulkan_semaphore_from_handle(in_ext->semaphore)->host.semaphore : 0;
+            out_ext->event = in_ext->event;
+            out_ext->mtlSharedEvent = in_ext->mtlSharedEvent;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT:
+        {
+            VkExportMetalTextureInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalTextureInfoEXT *in_ext = (const VkExportMetalTextureInfoEXT *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->image = in_ext->image;
+            out_ext->imageView = in_ext->imageView;
+            out_ext->bufferView = in_ext->bufferView;
+            out_ext->plane = in_ext->plane;
+            out_ext->mtlTexture = in_ext->mtlTexture;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        default:
+            FIXME("Unhandled sType %u.\n", in_header->sType);
+            break;
+        }
+    }
+}
+#endif /* _WIN64 */
+
+#ifdef _WIN64
+static void convert_VkExportMetalObjectsInfoEXT_host_to_win64(const VkExportMetalObjectsInfoEXT *in, VkExportMetalObjectsInfoEXT *out)
+{
+    const VkBaseInStructure *in_header;
+    VkBaseOutStructure *out_header;
+
+    if (!in) return;
+
+    for (out_header = (void *)out->pNext; out_header; out_header = out_header->pNext)
+    {
+        for (in_header = (void *)in->pNext; in_header; in_header = in_header->pNext)
+            if (in_header->sType == out_header->sType) break;
+        if (!in_header) continue;
+
+        switch (out_header->sType)
+        {
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_DEVICE_INFO_EXT:
+            ((VkExportMetalDeviceInfoEXT *)out_header)->mtlDevice = ((const VkExportMetalDeviceInfoEXT *)in_header)->mtlDevice;
+            break;
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_COMMAND_QUEUE_INFO_EXT:
+            ((VkExportMetalCommandQueueInfoEXT *)out_header)->mtlCommandQueue = ((const VkExportMetalCommandQueueInfoEXT *)in_header)->mtlCommandQueue;
+            break;
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_BUFFER_INFO_EXT:
+            ((VkExportMetalBufferInfoEXT *)out_header)->mtlBuffer = ((const VkExportMetalBufferInfoEXT *)in_header)->mtlBuffer;
+            break;
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT:
+            ((VkExportMetalTextureInfoEXT *)out_header)->mtlTexture = ((const VkExportMetalTextureInfoEXT *)in_header)->mtlTexture;
+            break;
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_IO_SURFACE_INFO_EXT:
+            ((VkExportMetalIOSurfaceInfoEXT *)out_header)->ioSurface = ((const VkExportMetalIOSurfaceInfoEXT *)in_header)->ioSurface;
+            break;
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT:
+            ((VkExportMetalSharedEventInfoEXT *)out_header)->mtlSharedEvent = ((const VkExportMetalSharedEventInfoEXT *)in_header)->mtlSharedEvent;
+            break;
+        default:
+            break;
+        }
+    }
+}
+#endif /* _WIN64 */
+
+static void convert_VkExportMetalObjectsInfoEXT_win32_to_host(struct conversion_context *ctx, const VkExportMetalObjectsInfoEXT32 *in, VkExportMetalObjectsInfoEXT *out)
+{
+    const VkBaseInStructure32 *in_header;
+    VkBaseOutStructure *out_header = (void *)out;
+
+    if (!in) return;
+
+    out->sType = in->sType;
+    out->pNext = NULL;
+
+    for (in_header = UlongToPtr(in->pNext); in_header; in_header = UlongToPtr(in_header->pNext))
+    {
+        switch (in_header->sType)
+        {
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_BUFFER_INFO_EXT:
+        {
+            VkExportMetalBufferInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalBufferInfoEXT32 *in_ext = (const VkExportMetalBufferInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_BUFFER_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->memory = vulkan_device_memory_from_handle(in_ext->memory)->host.device_memory;
+            out_ext->mtlBuffer = in_ext->mtlBuffer;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_COMMAND_QUEUE_INFO_EXT:
+        {
+            VkExportMetalCommandQueueInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalCommandQueueInfoEXT32 *in_ext = (const VkExportMetalCommandQueueInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_COMMAND_QUEUE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->queue = vulkan_queue_from_handle((VkQueue)UlongToPtr(in_ext->queue))->host.queue;
+            out_ext->mtlCommandQueue = in_ext->mtlCommandQueue;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_DEVICE_INFO_EXT:
+        {
+            VkExportMetalDeviceInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalDeviceInfoEXT32 *in_ext = (const VkExportMetalDeviceInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_DEVICE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->mtlDevice = in_ext->mtlDevice;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_IO_SURFACE_INFO_EXT:
+        {
+            VkExportMetalIOSurfaceInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalIOSurfaceInfoEXT32 *in_ext = (const VkExportMetalIOSurfaceInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_IO_SURFACE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->image = in_ext->image;
+            out_ext->ioSurface = in_ext->ioSurface;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT:
+        {
+            VkExportMetalSharedEventInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalSharedEventInfoEXT32 *in_ext = (const VkExportMetalSharedEventInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->semaphore = in_ext->semaphore ? vulkan_semaphore_from_handle(in_ext->semaphore)->host.semaphore : 0;
+            out_ext->event = in_ext->event;
+            out_ext->mtlSharedEvent = in_ext->mtlSharedEvent;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        case VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT:
+        {
+            VkExportMetalTextureInfoEXT *out_ext = conversion_context_alloc(ctx, sizeof(*out_ext));
+            const VkExportMetalTextureInfoEXT32 *in_ext = (const VkExportMetalTextureInfoEXT32 *)in_header;
+            out_ext->sType = VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT;
+            out_ext->pNext = NULL;
+            out_ext->image = in_ext->image;
+            out_ext->imageView = in_ext->imageView;
+            out_ext->bufferView = in_ext->bufferView;
+            out_ext->plane = in_ext->plane;
+            out_ext->mtlTexture = in_ext->mtlTexture;
+            out_header->pNext = (void *)out_ext;
+            out_header = (void *)out_ext;
+            break;
+        }
+        default:
+            FIXME("Unhandled sType %u.\n", in_header->sType);
+            break;
+        }
+    }
+}
+
+static void convert_VkExportMetalObjectsInfoEXT_host_to_win32(const VkExportMetalObjectsInfoEXT *in, VkExportMetalObjectsInfoEXT32 *out)
+{
+    if (!in) return;
+
 }
 
 #ifdef _WIN64
@@ -51095,11 +51662,15 @@ static NTSTATUS thunk32_vkCreateEvent(void *args)
         VkResult result;
     } *params = args;
     VkEventCreateInfo pCreateInfo_host;
+    struct conversion_context local_ctx;
+    struct conversion_context *ctx = &local_ctx;
 
     TRACE("%#x, %#x, %#x, %#x\n", params->device, params->pCreateInfo, params->pAllocator, params->pEvent);
 
-    convert_VkEventCreateInfo_win32_to_host((const VkEventCreateInfo32 *)UlongToPtr(params->pCreateInfo), &pCreateInfo_host);
+    init_conversion_context(ctx);
+    convert_VkEventCreateInfo_win32_to_host(ctx, (const VkEventCreateInfo32 *)UlongToPtr(params->pCreateInfo), &pCreateInfo_host);
     params->result = vulkan_device_from_handle((VkDevice)UlongToPtr(params->device))->p_vkCreateEvent(vulkan_device_from_handle((VkDevice)UlongToPtr(params->device))->host.device, &pCreateInfo_host, NULL, (VkEvent *)UlongToPtr(params->pEvent));
+    free_conversion_context(ctx);
     return STATUS_SUCCESS;
 }
 
@@ -54137,6 +54708,46 @@ static NTSTATUS thunk32_vkEnumeratePhysicalDevices(void *args)
     pPhysicalDevices_host = (params->pPhysicalDevices && *(uint32_t *)UlongToPtr(params->pPhysicalDeviceCount)) ? conversion_context_alloc(ctx, sizeof(*pPhysicalDevices_host) * *(uint32_t *)UlongToPtr(params->pPhysicalDeviceCount)) : NULL;
     params->result = wine_vkEnumeratePhysicalDevices((VkInstance)UlongToPtr(params->instance), (uint32_t *)UlongToPtr(params->pPhysicalDeviceCount), pPhysicalDevices_host);
     convert_VkPhysicalDevice_array_unwrapped_host_to_win32(pPhysicalDevices_host, (PTR32 *)UlongToPtr(params->pPhysicalDevices), *(uint32_t *)UlongToPtr(params->pPhysicalDeviceCount));
+    free_conversion_context(ctx);
+    return STATUS_SUCCESS;
+}
+
+#ifdef _WIN64
+static NTSTATUS thunk64_vkExportMetalObjectsEXT(void *args)
+{
+    struct vkExportMetalObjectsEXT_params *params = args;
+    VkExportMetalObjectsInfoEXT pMetalObjectsInfo_host;
+    struct conversion_context local_ctx;
+    struct conversion_context *ctx = &local_ctx;
+
+    TRACE("%p, %p\n", params->device, params->pMetalObjectsInfo);
+
+    init_conversion_context(ctx);
+    convert_VkExportMetalObjectsInfoEXT_win64_to_host(ctx, params->pMetalObjectsInfo, &pMetalObjectsInfo_host);
+    vulkan_device_from_handle(params->device)->p_vkExportMetalObjectsEXT(vulkan_device_from_handle(params->device)->host.device, &pMetalObjectsInfo_host);
+    convert_VkExportMetalObjectsInfoEXT_host_to_win64(&pMetalObjectsInfo_host, params->pMetalObjectsInfo);
+    free_conversion_context(ctx);
+    return STATUS_SUCCESS;
+}
+#endif /* _WIN64 */
+
+static NTSTATUS thunk32_vkExportMetalObjectsEXT(void *args)
+{
+    struct
+    {
+        PTR32 device;
+        PTR32 pMetalObjectsInfo;
+    } *params = args;
+    VkExportMetalObjectsInfoEXT pMetalObjectsInfo_host;
+    struct conversion_context local_ctx;
+    struct conversion_context *ctx = &local_ctx;
+
+    TRACE("%#x, %#x\n", params->device, params->pMetalObjectsInfo);
+
+    init_conversion_context(ctx);
+    convert_VkExportMetalObjectsInfoEXT_win32_to_host(ctx, (VkExportMetalObjectsInfoEXT32 *)UlongToPtr(params->pMetalObjectsInfo), &pMetalObjectsInfo_host);
+    vulkan_device_from_handle((VkDevice)UlongToPtr(params->device))->p_vkExportMetalObjectsEXT(vulkan_device_from_handle((VkDevice)UlongToPtr(params->device))->host.device, &pMetalObjectsInfo_host);
+    convert_VkExportMetalObjectsInfoEXT_host_to_win32(&pMetalObjectsInfo_host, (VkExportMetalObjectsInfoEXT32 *)UlongToPtr(params->pMetalObjectsInfo));
     free_conversion_context(ctx);
     return STATUS_SUCCESS;
 }
@@ -62521,6 +63132,7 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
     thunk64_vkEnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM,
     thunk64_vkEnumeratePhysicalDeviceQueueFamilyPerformanceQueryCountersKHR,
     thunk64_vkEnumeratePhysicalDevices,
+    thunk64_vkExportMetalObjectsEXT,
     thunk64_vkFlushMappedMemoryRanges,
     thunk64_vkFreeCommandBuffers,
     thunk64_vkFreeDescriptorSets,
@@ -63206,6 +63818,7 @@ const unixlib_entry_t __wine_unix_call_funcs[] =
     thunk32_vkEnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM,
     thunk32_vkEnumeratePhysicalDeviceQueueFamilyPerformanceQueryCountersKHR,
     thunk32_vkEnumeratePhysicalDevices,
+    thunk32_vkExportMetalObjectsEXT,
     thunk32_vkFlushMappedMemoryRanges,
     thunk32_vkFreeCommandBuffers,
     thunk32_vkFreeDescriptorSets,

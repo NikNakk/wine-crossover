@@ -453,6 +453,7 @@ enum unix_call
     unix_vkEnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM,
     unix_vkEnumeratePhysicalDeviceQueueFamilyPerformanceQueryCountersKHR,
     unix_vkEnumeratePhysicalDevices,
+    unix_vkExportMetalObjectsEXT,
     unix_vkFlushMappedMemoryRanges,
     unix_vkFreeCommandBuffers,
     unix_vkFreeDescriptorSets,
@@ -3989,6 +3990,12 @@ struct vkEnumeratePhysicalDevices_params
     uint32_t *pPhysicalDeviceCount;
     VkPhysicalDevice *pPhysicalDevices;
     VkResult result;
+};
+
+struct vkExportMetalObjectsEXT_params
+{
+    VkDevice device;
+    VkExportMetalObjectsInfoEXT *pMetalObjectsInfo;
 };
 
 struct vkFlushMappedMemoryRanges_params

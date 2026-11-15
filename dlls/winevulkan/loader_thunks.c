@@ -4368,6 +4368,16 @@ VkResult WINAPI vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysi
     return params.result;
 }
 
+void WINAPI vkExportMetalObjectsEXT(VkDevice device, VkExportMetalObjectsInfoEXT *pMetalObjectsInfo)
+{
+    struct vkExportMetalObjectsEXT_params params;
+    NTSTATUS status;
+    params.device = device;
+    params.pMetalObjectsInfo = pMetalObjectsInfo;
+    status = UNIX_CALL(vkExportMetalObjectsEXT, &params);
+    assert(!status && "vkExportMetalObjectsEXT");
+}
+
 VkResult WINAPI vkFlushMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMappedMemoryRange *pMemoryRanges)
 {
     struct vkFlushMappedMemoryRanges_params params;
@@ -7613,6 +7623,7 @@ static const struct vulkan_func vk_device_dispatch_table[] =
     {"vkDestroyVideoSessionParametersKHR", vkDestroyVideoSessionParametersKHR},
     {"vkDeviceWaitIdle", vkDeviceWaitIdle},
     {"vkEndCommandBuffer", vkEndCommandBuffer},
+    {"vkExportMetalObjectsEXT", vkExportMetalObjectsEXT},
     {"vkFlushMappedMemoryRanges", vkFlushMappedMemoryRanges},
     {"vkFreeCommandBuffers", vkFreeCommandBuffers},
     {"vkFreeDescriptorSets", vkFreeDescriptorSets},

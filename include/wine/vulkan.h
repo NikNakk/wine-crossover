@@ -519,6 +519,8 @@ typedef struct _XDisplay Display;
 #define VK_QCOM_TILE_SHADING_EXTENSION_NAME "VK_QCOM_tile_shading"
 #define VK_NV_LOW_LATENCY_SPEC_VERSION 1
 #define VK_NV_LOW_LATENCY_EXTENSION_NAME "VK_NV_low_latency"
+#define VK_EXT_METAL_OBJECTS_SPEC_VERSION 2
+#define VK_EXT_METAL_OBJECTS_EXTENSION_NAME "VK_EXT_metal_objects"
 #define VK_KHR_SYNCHRONIZATION_2_SPEC_VERSION 1
 #define VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME "VK_KHR_synchronization2"
 #define VK_EXT_DESCRIPTOR_BUFFER_SPEC_VERSION 1
@@ -2998,6 +3000,17 @@ typedef enum VkEventCreateFlagBits
     VK_EVENT_CREATE_FLAG_BITS_MAX_ENUM = 0x7fffffff,
     VK_EVENT_CREATE_DEVICE_ONLY_BIT_KHR = VK_EVENT_CREATE_DEVICE_ONLY_BIT,
 } VkEventCreateFlagBits;
+
+typedef enum VkExportMetalObjectTypeFlagBitsEXT
+{
+    VK_EXPORT_METAL_OBJECT_TYPE_METAL_DEVICE_BIT_EXT = 0x00000001,
+    VK_EXPORT_METAL_OBJECT_TYPE_METAL_COMMAND_QUEUE_BIT_EXT = 0x00000002,
+    VK_EXPORT_METAL_OBJECT_TYPE_METAL_BUFFER_BIT_EXT = 0x00000004,
+    VK_EXPORT_METAL_OBJECT_TYPE_METAL_TEXTURE_BIT_EXT = 0x00000008,
+    VK_EXPORT_METAL_OBJECT_TYPE_METAL_IOSURFACE_BIT_EXT = 0x00000010,
+    VK_EXPORT_METAL_OBJECT_TYPE_METAL_SHARED_EVENT_BIT_EXT = 0x00000020,
+    VK_EXPORT_METAL_OBJECT_TYPE_FLAG_BITS_EXT_MAX_ENUM = 0x7fffffff,
+} VkExportMetalObjectTypeFlagBitsEXT;
 
 typedef enum VkExternalFenceFeatureFlagBits
 {
@@ -5899,6 +5912,18 @@ typedef enum VkStructureType
     VK_STRUCTURE_TYPE_PER_TILE_END_INFO_QCOM = 1000309004,
     VK_STRUCTURE_TYPE_DISPATCH_TILE_INFO_QCOM = 1000309005,
     VK_STRUCTURE_TYPE_QUERY_LOW_LATENCY_SUPPORT_NV = 1000310000,
+    VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT = 1000311000,
+    VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECTS_INFO_EXT = 1000311001,
+    VK_STRUCTURE_TYPE_EXPORT_METAL_DEVICE_INFO_EXT = 1000311002,
+    VK_STRUCTURE_TYPE_EXPORT_METAL_COMMAND_QUEUE_INFO_EXT = 1000311003,
+    VK_STRUCTURE_TYPE_EXPORT_METAL_BUFFER_INFO_EXT = 1000311004,
+    VK_STRUCTURE_TYPE_IMPORT_METAL_BUFFER_INFO_EXT = 1000311005,
+    VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT = 1000311006,
+    VK_STRUCTURE_TYPE_IMPORT_METAL_TEXTURE_INFO_EXT = 1000311007,
+    VK_STRUCTURE_TYPE_EXPORT_METAL_IO_SURFACE_INFO_EXT = 1000311008,
+    VK_STRUCTURE_TYPE_IMPORT_METAL_IO_SURFACE_INFO_EXT = 1000311009,
+    VK_STRUCTURE_TYPE_EXPORT_METAL_SHARED_EVENT_INFO_EXT = 1000311010,
+    VK_STRUCTURE_TYPE_IMPORT_METAL_SHARED_EVENT_INFO_EXT = 1000311011,
     VK_STRUCTURE_TYPE_MEMORY_BARRIER_2 = 1000314000,
     VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2 = 1000314001,
     VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2 = 1000314002,
@@ -12243,6 +12268,70 @@ typedef struct VkExportMemoryWin32HandleInfoKHR
     LPCWSTR name;
 } VkExportMemoryWin32HandleInfoKHR;
 
+typedef struct VkExportMetalBufferInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    VkDeviceMemory WINE_VK_ALIGN(8) memory;
+    MTLBuffer_id mtlBuffer;
+} VkExportMetalBufferInfoEXT;
+
+typedef struct VkExportMetalCommandQueueInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    VkQueue queue;
+    MTLCommandQueue_id mtlCommandQueue;
+} VkExportMetalCommandQueueInfoEXT;
+
+typedef struct VkExportMetalDeviceInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    MTLDevice_id mtlDevice;
+} VkExportMetalDeviceInfoEXT;
+
+typedef struct VkExportMetalIOSurfaceInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    VkImage WINE_VK_ALIGN(8) image;
+    IOSurfaceRef ioSurface;
+} VkExportMetalIOSurfaceInfoEXT;
+
+typedef struct VkExportMetalObjectCreateInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    VkExportMetalObjectTypeFlagBitsEXT exportObjectType;
+} VkExportMetalObjectCreateInfoEXT;
+
+typedef struct VkExportMetalObjectsInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+} VkExportMetalObjectsInfoEXT;
+
+typedef struct VkExportMetalSharedEventInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    VkSemaphore WINE_VK_ALIGN(8) semaphore;
+    VkEvent WINE_VK_ALIGN(8) event;
+    MTLSharedEvent_id mtlSharedEvent;
+} VkExportMetalSharedEventInfoEXT;
+
+typedef struct VkExportMetalTextureInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    VkImage WINE_VK_ALIGN(8) image;
+    VkImageView WINE_VK_ALIGN(8) imageView;
+    VkBufferView WINE_VK_ALIGN(8) bufferView;
+    VkImageAspectFlagBits plane;
+    MTLTexture_id mtlTexture;
+} VkExportMetalTextureInfoEXT;
+
 typedef struct VkExportSemaphoreCreateInfo
 {
     VkStructureType sType;
@@ -12891,6 +12980,35 @@ typedef struct VkImportMemoryWin32HandleInfoKHR
     HANDLE handle;
     LPCWSTR name;
 } VkImportMemoryWin32HandleInfoKHR;
+
+typedef struct VkImportMetalBufferInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    MTLBuffer_id mtlBuffer;
+} VkImportMetalBufferInfoEXT;
+
+typedef struct VkImportMetalIOSurfaceInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    IOSurfaceRef ioSurface;
+} VkImportMetalIOSurfaceInfoEXT;
+
+typedef struct VkImportMetalSharedEventInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    MTLSharedEvent_id mtlSharedEvent;
+} VkImportMetalSharedEventInfoEXT;
+
+typedef struct VkImportMetalTextureInfoEXT
+{
+    VkStructureType sType;
+    const void *pNext;
+    VkImageAspectFlagBits plane;
+    MTLTexture_id mtlTexture;
+} VkImportMetalTextureInfoEXT;
 
 typedef struct VkImportSemaphoreFdInfoKHR
 {
@@ -19653,6 +19771,7 @@ typedef VkResult (VKAPI_PTR *PFN_vkEnumeratePhysicalDeviceGroupsKHR)(VkInstance,
 typedef VkResult (VKAPI_PTR *PFN_vkEnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM)(VkPhysicalDevice, uint32_t, uint32_t *, VkPerformanceCounterARM *, VkPerformanceCounterDescriptionARM *);
 typedef VkResult (VKAPI_PTR *PFN_vkEnumeratePhysicalDeviceQueueFamilyPerformanceQueryCountersKHR)(VkPhysicalDevice, uint32_t, uint32_t *, VkPerformanceCounterKHR *, VkPerformanceCounterDescriptionKHR *);
 typedef VkResult (VKAPI_PTR *PFN_vkEnumeratePhysicalDevices)(VkInstance, uint32_t *, VkPhysicalDevice *);
+typedef void (VKAPI_PTR *PFN_vkExportMetalObjectsEXT)(VkDevice, VkExportMetalObjectsInfoEXT *);
 typedef VkResult (VKAPI_PTR *PFN_vkFlushMappedMemoryRanges)(VkDevice, uint32_t, const VkMappedMemoryRange *);
 typedef void (VKAPI_PTR *PFN_vkFreeCommandBuffers)(VkDevice, VkCommandPool, uint32_t, const VkCommandBuffer *);
 typedef VkResult (VKAPI_PTR *PFN_vkFreeDescriptorSets)(VkDevice, VkDescriptorPool, uint32_t, const VkDescriptorSet *);
@@ -20345,6 +20464,7 @@ VkResult VKAPI_CALL vkEnumeratePhysicalDeviceGroupsKHR(VkInstance instance, uint
 VkResult VKAPI_CALL vkEnumeratePhysicalDeviceQueueFamilyPerformanceCountersByRegionARM(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, uint32_t *pCounterCount, VkPerformanceCounterARM *pCounters, VkPerformanceCounterDescriptionARM *pCounterDescriptions);
 VkResult VKAPI_CALL vkEnumeratePhysicalDeviceQueueFamilyPerformanceQueryCountersKHR(VkPhysicalDevice physicalDevice, uint32_t queueFamilyIndex, uint32_t *pCounterCount, VkPerformanceCounterKHR *pCounters, VkPerformanceCounterDescriptionKHR *pCounterDescriptions);
 VkResult VKAPI_CALL vkEnumeratePhysicalDevices(VkInstance instance, uint32_t *pPhysicalDeviceCount, VkPhysicalDevice *pPhysicalDevices);
+void VKAPI_CALL vkExportMetalObjectsEXT(VkDevice device, VkExportMetalObjectsInfoEXT *pMetalObjectsInfo);
 VkResult VKAPI_CALL vkFlushMappedMemoryRanges(VkDevice device, uint32_t memoryRangeCount, const VkMappedMemoryRange *pMemoryRanges);
 void VKAPI_CALL vkFreeCommandBuffers(VkDevice device, VkCommandPool commandPool, uint32_t commandBufferCount, const VkCommandBuffer *pCommandBuffers);
 VkResult VKAPI_CALL vkFreeDescriptorSets(VkDevice device, VkDescriptorPool descriptorPool, uint32_t descriptorSetCount, const VkDescriptorSet *pDescriptorSets);
@@ -21013,6 +21133,7 @@ VkResult VKAPI_CALL vkWriteMicromapsPropertiesEXT(VkDevice device, uint32_t micr
     USE_VK_FUNC(vkDestroyVideoSessionParametersKHR) \
     USE_VK_FUNC(vkDeviceWaitIdle) \
     USE_VK_FUNC(vkEndCommandBuffer) \
+    USE_VK_FUNC(vkExportMetalObjectsEXT) \
     USE_VK_FUNC(vkFlushMappedMemoryRanges) \
     USE_VK_FUNC(vkFreeCommandBuffers) \
     USE_VK_FUNC(vkFreeDescriptorSets) \
@@ -21302,6 +21423,7 @@ VkResult VKAPI_CALL vkWriteMicromapsPropertiesEXT(VkDevice device, uint32_t micr
     USE_VK_EXT(VK_EXT_memory_decompression) \
     USE_VK_EXT(VK_EXT_memory_priority) \
     USE_VK_EXT(VK_EXT_mesh_shader) \
+    USE_VK_EXT(VK_EXT_metal_objects) \
     USE_VK_EXT(VK_EXT_multi_draw) \
     USE_VK_EXT(VK_EXT_multisampled_render_to_single_sampled) \
     USE_VK_EXT(VK_EXT_mutable_descriptor_type) \
