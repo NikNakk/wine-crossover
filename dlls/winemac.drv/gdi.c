@@ -71,7 +71,10 @@ static void compute_desktop_rect(void)
     }
 
     for (i = 0; i < count; i++)
+    {
+        if (macdrv_display_is_hidden(displayIDs[i])) continue;  /* macos-wine-xr: a VR headset's display */
         desktop_rect = CGRectUnion(desktop_rect, CGDisplayBounds(displayIDs[i]));
+    }
     desktop_rect = cgrect_win_from_mac(desktop_rect);
 }
 

@@ -285,6 +285,7 @@ extern void macdrv_free_gpus(struct macdrv_gpu* gpus);
 extern int macdrv_get_adapters(uint64_t gpu_id, struct macdrv_adapter** adapters, int* count);
 extern void macdrv_free_adapters(struct macdrv_adapter* adapters);
 extern int macdrv_get_monitors(CGDirectDisplayID adapter_id, struct macdrv_monitor** monitors, int* count);
+extern int macdrv_display_is_hidden(CGDirectDisplayID display_id);
 extern void macdrv_free_monitors(struct macdrv_monitor* monitors, int monitor_count);
 
 

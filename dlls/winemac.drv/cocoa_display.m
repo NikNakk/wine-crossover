@@ -515,6 +515,43 @@ void macdrv_free_gpus(struct macdrv_gpu* gpus)
 }
 
 /***********************************************************************
+ *              macdrv_display_is_hidden
+ *
+ * macos-wine-xr: whether a display is kept from Windows programs. A VR headset that
+ * macOS drives as an ordinary display (the PS VR2, which Monado composites on through a
+ * window of its own) must not become a monitor a game can go full screen on or change
+ * the mode of. MWXR_HIDDEN_DISPLAYS lists display names (NSScreen.localizedName),
+ * separated by commas; unset means "PS VR2", empty hides nothing. The main display is
+ * never hidden.
+ */
+int macdrv_display_is_hidden(CGDirectDisplayID display_id)
+{
+@autoreleasepool
+{
+    static NSArray<NSString *> *hidden;
+    static dispatch_once_t once;
+    dispatch_once(&once, ^{
+        const char *env = getenv("MWXR_HIDDEN_DISPLAYS");
+        NSMutableArray<NSString *> *names = [NSMutableArray array];
+        for (NSString *name in [[NSString stringWithUTF8String:env ? env : "PS VR2"] componentsSeparatedByString:@","])
+        {
+            NSString *trimmed = [name stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            if (trimmed.length) [names addObject:trimmed];
+        }
+        hidden = [names copy];
+    });
+    if (!hidden.count || CGDisplayIsMain(display_id)) return NO;
+    if (![NSScreen instancesRespondToSelector:@selector(localizedName)]) return NO;
+    for (NSScreen *screen in [NSScreen screens])
+    {
+        if ([[screen deviceDescription][@"NSScreenNumber"] unsignedIntValue] == display_id)
+            return [hidden containsObject:screen.localizedName];
+    }
+    return NO;
+}
+}
+
+/***********************************************************************
  *              macdrv_get_adapters
  *
  * Get a list of adapters under gpu_id. The first adapter is primary if GPU is primary.
@@ -553,6 +590,8 @@ int macdrv_get_adapters(uint64_t gpu_id, struct macdrv_adapter** new_adapters, i
     {
         /* Mirrored displays are under the same adapter with primary display, so they doesn't increase adapter count */
         if (CGDisplayMirrorsDisplay(display_ids[i]) != kCGNullDirectDisplay)
+            continue;
+        if (macdrv_display_is_hidden(display_ids[i]))
             continue;
 
         if (macdrv_get_gpu_info_from_display_id(&gpu, display_ids[i]))
@@ -954,6 +993,8 @@ int macdrv_get_monitors(CGDirectDisplayID adapter_id, struct macdrv_monitor** ne
         if (adapter_id     != kCGNullDirectDisplay &&
             display_ids[i] != adapter_id           &&
             CGDisplayMirrorsDisplay(display_ids[i]) != adapter_id)
+            continue;
+        if (macdrv_display_is_hidden(display_ids[i]))
             continue;
 
         /* Find and fill in monitor info */
