@@ -323,7 +323,9 @@ static void handle_DeviceMatchingCallback(void *context, IOReturn result, void *
     if (IOHIDDeviceConformsTo(IOHIDDevice, kHIDPage_GenericDesktop, kHIDUsage_GD_GamePad) ||
        IOHIDDeviceConformsTo(IOHIDDevice, kHIDPage_GenericDesktop, kHIDUsage_GD_Joystick))
     {
-        if (is_xbox_gamepad(desc.vid, desc.pid))
+        /* Sony pads keep their raw report; xinput and winexinput map its layout. */
+        if (is_xbox_gamepad(desc.vid, desc.pid) || is_dualshock4_gamepad(desc.vid, desc.pid) ||
+            is_dualsense_gamepad(desc.vid, desc.pid))
             desc.is_gamepad = TRUE;
     }
 

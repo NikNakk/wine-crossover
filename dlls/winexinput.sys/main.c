@@ -160,6 +160,7 @@ struct func_device
     HIDP_VALUE_CAPS ry_caps;
     HIDP_VALUE_CAPS rt_caps;
     HIDP_DEVICE_DESC device_desc;
+    BOOL sony_layout;
 
     /* everything below requires holding the cs */
     CRITICAL_SECTION cs;
@@ -192,13 +193,25 @@ static LONG scale_value(ULONG value, const HIDP_VALUE_CAPS *caps, LONG min, LONG
     return min + MulDiv(tmp - caps->LogicalMin, max - min, caps->LogicalMax - caps->LogicalMin);
 }
 
+/* Sony's raw layout (see is_sony_gamepad): its buttons in XInput's report order
+ * A, B, X, Y, LB, RB, Back, Start, LS, RS. */
+static const USAGE sony_buttons[] = {2, 3, 1, 4, 5, 6, 9, 10, 11, 12};
+
 static void translate_report_to_xinput_state(struct func_device *fdo)
 {
     ULONG lx = 0, ly = 0, rx = 0, ry = 0, lt = 0, rt = 0, hat = 0;
+    USAGE rx_usage = HID_USAGE_GENERIC_RX, ry_usage = HID_USAGE_GENERIC_RY;
+    USAGE lt_usage = HID_USAGE_GENERIC_Z, rt_usage = HID_USAGE_GENERIC_RZ;
     PHIDP_PREPARSED_DATA preparsed;
-    USAGE usages[10];
+    USAGE usages[32];
     NTSTATUS status;
-    ULONG i, count;
+    ULONG i, j, count;
+
+    if (fdo->sony_layout)
+    {
+        rx_usage = HID_USAGE_GENERIC_Z; ry_usage = HID_USAGE_GENERIC_RZ;
+        lt_usage = HID_USAGE_GENERIC_RX; rt_usage = HID_USAGE_GENERIC_RY;
+    }
 
     preparsed = fdo->device_desc.CollectionDesc->PreparsedData;
 
@@ -215,30 +228,44 @@ static void translate_report_to_xinput_state(struct func_device *fdo)
     status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, HID_USAGE_GENERIC_Y,
                                 &ly, preparsed, fdo->report_buf, fdo->report_len);
     if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue y returned %#lx\n", status);
-    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, HID_USAGE_GENERIC_Z,
+    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, lt_usage,
                                 &lt, preparsed, fdo->report_buf, fdo->report_len);
-    if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue z returned %#lx\n", status);
-    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, HID_USAGE_GENERIC_RX,
+    if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue lt (%#x) returned %#lx\n", lt_usage, status);
+    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, rx_usage,
                                 &rx, preparsed, fdo->report_buf, fdo->report_len);
-    if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue rx returned %#lx\n", status);
-    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, HID_USAGE_GENERIC_RY,
+    if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue rx (%#x) returned %#lx\n", rx_usage, status);
+    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, ry_usage,
                                 &ry, preparsed, fdo->report_buf, fdo->report_len);
-    if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue ry returned %#lx\n", status);
-    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, HID_USAGE_GENERIC_RZ,
+    if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue ry (%#x) returned %#lx\n", ry_usage, status);
+    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, rt_usage,
                                 &rt, preparsed, fdo->report_buf, fdo->report_len);
-    if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue rz returned %#lx\n", status);
+    if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue rt (%#x) returned %#lx\n", rt_usage, status);
 
+    /* Sony's hat counts 0-7 from up, with 8 for centred */
+    if (fdo->sony_layout) hat = hat <= 7 ? hat + 1 : 0;
     if (hat < 1 || hat > 8) fdo->xinput_state.buttons = 0;
     else fdo->xinput_state.buttons = hat << 10;
     for (i = 0; i < count; i++)
     {
+        if (fdo->sony_layout)
+        {
+            for (j = 0; j < ARRAY_SIZE(sony_buttons); j++)
+                if (usages[i] == sony_buttons[j]) fdo->xinput_state.buttons |= 1 << j;
+            continue;
+        }
         if (usages[i] < 1 || usages[i] > 10) continue;
         fdo->xinput_state.buttons |= (1 << (usages[i] - 1));
     }
+    /* this report's Y axes point down: Sony's already do */
+    if (!fdo->sony_layout)
+    {
+        ly = -ly - 1;
+        ry = -ry - 1;
+    }
     fdo->xinput_state.lx_axis = scale_value(lx, &fdo->lx_caps, 0, 65535);
-    fdo->xinput_state.ly_axis = scale_value(-ly - 1, &fdo->ly_caps, 0, 65535);
+    fdo->xinput_state.ly_axis = scale_value(ly, &fdo->ly_caps, 0, 65535);
     fdo->xinput_state.rx_axis = scale_value(rx, &fdo->rx_caps, 0, 65535);
-    fdo->xinput_state.ry_axis = scale_value(-ry - 1, &fdo->ry_caps, 0, 65535);
+    fdo->xinput_state.ry_axis = scale_value(ry, &fdo->ry_caps, 0, 65535);
     rt = scale_value(rt, &fdo->rt_caps, 0, 255);
     lt = scale_value(lt, &fdo->lt_caps, 0, 255);
     fdo->xinput_state.trigger = 0x8000 + (lt - rt) * 128;
@@ -633,8 +660,37 @@ static NTSTATUS sync_ioctl(DEVICE_OBJECT *device, DWORD code, void *in_buf, DWOR
     return io.Status;
 }
 
+/* Sony gamepads read through raw HID (macOS IOHID) keep their own report layout: X/Y
+ * left stick, Z/Rz right stick, Rx/Ry triggers, Y axes pointing down, and buttons in
+ * Square, Cross, Circle, Triangle, L1, R1, L2, R2, Create, Options, L3, R3, PS order. */
+static BOOL is_sony_gamepad(const HID_DEVICE_ATTRIBUTES *attr)
+{
+    if (attr->VendorID != 0x054c) return FALSE;
+    switch (attr->ProductID)
+    {
+    case 0x05c4: /* DualShock 4 [CUH-ZCT1x] */
+    case 0x09cc: /* DualShock 4 [CUH-ZCT2x] */
+    case 0x0ba0: /* DualShock 4 Wireless Adaptor */
+    case 0x0ce6: /* DualSense */
+    case 0x0df2: /* DualSense Edge */
+        return TRUE;
+    }
+    return FALSE;
+}
+
 static void check_value_caps(struct func_device *fdo, USHORT usage, HIDP_VALUE_CAPS *caps)
 {
+    if (fdo->sony_layout) switch (usage)
+    {
+    case HID_USAGE_GENERIC_X: fdo->lx_caps = *caps; return;
+    case HID_USAGE_GENERIC_Y: fdo->ly_caps = *caps; return;
+    case HID_USAGE_GENERIC_Z: fdo->rx_caps = *caps; return;
+    case HID_USAGE_GENERIC_RZ: fdo->ry_caps = *caps; return;
+    case HID_USAGE_GENERIC_RX: fdo->lt_caps = *caps; return;
+    case HID_USAGE_GENERIC_RY: fdo->rt_caps = *caps; return;
+    default: return;
+    }
+
     switch (usage)
     {
     case HID_USAGE_GENERIC_X: fdo->lx_caps = *caps; break;
@@ -654,6 +710,7 @@ static NTSTATUS initialize_device(DEVICE_OBJECT *device)
     PHIDP_PREPARSED_DATA preparsed;
     HIDP_BUTTON_CAPS *button_caps;
     HID_DESCRIPTOR hid_desc = {0};
+    HID_DEVICE_ATTRIBUTES attr = {0};
     HIDP_VALUE_CAPS *value_caps;
     HIDP_REPORT_IDS *reports;
     NTSTATUS status;
@@ -661,6 +718,10 @@ static NTSTATUS initialize_device(DEVICE_OBJECT *device)
 
     if ((status = sync_ioctl(fdo->bus_device, IOCTL_HID_GET_DEVICE_DESCRIPTOR, NULL, 0, &hid_desc, sizeof(hid_desc))))
         return status;
+    attr.Size = sizeof(attr);
+    if (!sync_ioctl(fdo->bus_device, IOCTL_HID_GET_DEVICE_ATTRIBUTES, NULL, 0, &attr, sizeof(attr)) &&
+        (fdo->sony_layout = is_sony_gamepad(&attr)))
+        TRACE("Using the Sony gamepad layout for %04x:%04x\n", attr.VendorID, attr.ProductID);
 
     if (!(report_desc_len = hid_desc.DescriptorList[0].wReportLength)) return STATUS_UNSUCCESSFUL;
     if (!(report_desc = malloc(report_desc_len))) return STATUS_NO_MEMORY;
