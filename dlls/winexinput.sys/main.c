@@ -197,6 +197,32 @@ static LONG scale_value(ULONG value, const HIDP_VALUE_CAPS *caps, LONG min, LONG
  * A, B, X, Y, LB, RB, Back, Start, LS, RS. */
 static const USAGE sony_buttons[] = {2, 3, 1, 4, 5, 6, 9, 10, 11, 12};
 
+/* Sony's extended Bluetooth input reports as report 1, as winebus's fixups make them: winebus
+ * stops converting once a program writes to the pad (rumble included), expecting it to read
+ * the raw reports. DualSense 0x31: prefix, X Y Z Rz, triggers, counter, buttons[3];
+ * DualShock 4 0x11: two prefix bytes, then report 1. Returns buf, or tmp holding report 1. */
+static char *sony_report_1(char *buf, ULONG len, char *tmp, ULONG tmp_len)
+{
+    if (len > tmp_len || len < 12) return buf;
+    if ((BYTE)buf[0] == 0x31)
+    {
+        memset(tmp, 0, len);
+        tmp[0] = 1;
+        memcpy(tmp + 1, buf + 2, 4);  /* X Y Z Rz */
+        memcpy(tmp + 5, buf + 9, 3);  /* hat and buttons */
+        memcpy(tmp + 8, buf + 6, 2);  /* triggers */
+        return tmp;
+    }
+    if ((BYTE)buf[0] == 0x11)
+    {
+        memset(tmp, 0, len);
+        memcpy(tmp, buf + 2, 10);
+        tmp[0] = 1;
+        return tmp;
+    }
+    return buf;
+}
+
 static void translate_report_to_xinput_state(struct func_device *fdo)
 {
     ULONG lx = 0, ly = 0, rx = 0, ry = 0, lt = 0, rt = 0, hat = 0;
@@ -214,6 +240,12 @@ static void translate_report_to_xinput_state(struct func_device *fdo)
     }
 
     preparsed = fdo->device_desc.CollectionDesc->PreparsedData;
+
+    if (fdo->sony_layout)
+    {
+        char sony_buf[128], *report = sony_report_1(fdo->report_buf, fdo->report_len, sony_buf, sizeof(sony_buf));
+        if (report != fdo->report_buf) memcpy(fdo->report_buf, report, fdo->report_len);
+    }
 
     count = ARRAY_SIZE(usages);
     status = HidP_GetUsages(HidP_Input, HID_USAGE_PAGE_BUTTON, 0, usages,

@@ -686,11 +686,38 @@ static LONG scale_value(ULONG value, const HIDP_VALUE_CAPS *caps, LONG min, LONG
     return min + MulDiv(tmp - caps->LogicalMin, max - min, caps->LogicalMax - caps->LogicalMin);
 }
 
+/* Sony's extended Bluetooth input reports as report 1, as winebus's fixups make them: winebus
+ * stops converting once a program writes to the pad (rumble included), expecting it to read
+ * the raw reports. DualSense 0x31: prefix, X Y Z Rz, triggers, counter, buttons[3];
+ * DualShock 4 0x11: two prefix bytes, then report 1. Returns buf, or tmp holding report 1. */
+static char *sony_report_1(char *buf, ULONG len, char *tmp, ULONG tmp_len)
+{
+    if (len > tmp_len || len < 12) return buf;
+    if ((BYTE)buf[0] == 0x31)
+    {
+        memset(tmp, 0, len);
+        tmp[0] = 1;
+        memcpy(tmp + 1, buf + 2, 4);  /* X Y Z Rz */
+        memcpy(tmp + 5, buf + 9, 3);  /* hat and buttons */
+        memcpy(tmp + 8, buf + 6, 2);  /* triggers */
+        return tmp;
+    }
+    if ((BYTE)buf[0] == 0x11)
+    {
+        memset(tmp, 0, len);
+        memcpy(tmp, buf + 2, 10);
+        tmp[0] = 1;
+        return tmp;
+    }
+    return buf;
+}
+
 static void read_controller_state(struct xinput_controller *controller)
 {
     ULONG read_len, report_len = controller->hid.caps.InputReportByteLength;
     char *report_buf = controller->hid.input_report_buf;
     BOOL sony = controller->hid.sony_layout;
+    char sony_buf[128], *parse_buf = report_buf;
     XINPUT_STATE state;
     NTSTATUS status;
     USAGE buttons[32];
@@ -709,8 +736,10 @@ static void read_controller_state(struct xinput_controller *controller)
         return;
     }
 
+    if (sony) parse_buf = sony_report_1(report_buf, report_len, sony_buf, sizeof(sony_buf));
+
     button_length = ARRAY_SIZE(buttons);
-    status = HidP_GetUsages(HidP_Input, HID_USAGE_PAGE_BUTTON, 0, buttons, &button_length, controller->hid.preparsed, report_buf, report_len);
+    status = HidP_GetUsages(HidP_Input, HID_USAGE_PAGE_BUTTON, 0, buttons, &button_length, controller->hid.preparsed, parse_buf, report_len);
     if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsages HID_USAGE_PAGE_BUTTON returned %#lx\n", status);
 
     state.Gamepad.wButtons = 0;
@@ -749,11 +778,11 @@ static void read_controller_state(struct xinput_controller *controller)
     }
 
     button_length = ARRAY_SIZE(buttons);
-    status = HidP_GetUsages(HidP_Input, HID_USAGE_PAGE_VENDOR_DEFINED_BEGIN, 0, buttons, &button_length, controller->hid.preparsed, report_buf, report_len);
+    status = HidP_GetUsages(HidP_Input, HID_USAGE_PAGE_VENDOR_DEFINED_BEGIN, 0, buttons, &button_length, controller->hid.preparsed, parse_buf, report_len);
     if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsages HID_USAGE_PAGE_VENDOR_DEFINED_BEGIN returned %#lx\n", status);
     if (button_length) state.Gamepad.wButtons |= XINPUT_GAMEPAD_GUIDE;
 
-    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, HID_USAGE_GENERIC_HATSWITCH, &value, controller->hid.preparsed, report_buf, report_len);
+    status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, HID_USAGE_GENERIC_HATSWITCH, &value, controller->hid.preparsed, parse_buf, report_len);
     /* Sony's hat counts 0-7 from up, with 8 for centred */
     if (sony) value = value <= 7 ? value + 1 : 0;
     if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue HID_USAGE_PAGE_GENERIC / HID_USAGE_GENERIC_HATSWITCH returned %#lx\n", status);
@@ -786,27 +815,27 @@ static void read_controller_state(struct xinput_controller *controller)
             lt = HID_USAGE_GENERIC_RX; rt = HID_USAGE_GENERIC_RY;
         }
 
-        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, lx, &value, controller->hid.preparsed, report_buf, report_len);
+        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, lx, &value, controller->hid.preparsed, parse_buf, report_len);
         if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue left stick X (%#x) returned %#lx\n", lx, status);
         else state.Gamepad.sThumbLX = scale_value(value, &controller->hid.lx_caps, -32768, 32767);
 
-        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, ly, &value, controller->hid.preparsed, report_buf, report_len);
+        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, ly, &value, controller->hid.preparsed, parse_buf, report_len);
         if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue left stick Y (%#x) returned %#lx\n", ly, status);
         else state.Gamepad.sThumbLY = scale_value(value, &controller->hid.ly_caps, y_min, y_max);
 
-        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, rx, &value, controller->hid.preparsed, report_buf, report_len);
+        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, rx, &value, controller->hid.preparsed, parse_buf, report_len);
         if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue right stick X (%#x) returned %#lx\n", rx, status);
         else state.Gamepad.sThumbRX = scale_value(value, &controller->hid.rx_caps, -32768, 32767);
 
-        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, ry, &value, controller->hid.preparsed, report_buf, report_len);
+        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, ry, &value, controller->hid.preparsed, parse_buf, report_len);
         if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue right stick Y (%#x) returned %#lx\n", ry, status);
         else state.Gamepad.sThumbRY = scale_value(value, &controller->hid.ry_caps, y_min, y_max);
 
-        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, rt, &value, controller->hid.preparsed, report_buf, report_len);
+        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, rt, &value, controller->hid.preparsed, parse_buf, report_len);
         if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue right trigger (%#x) returned %#lx\n", rt, status);
         else state.Gamepad.bRightTrigger = scale_value(value, &controller->hid.rt_caps, 0, 255);
 
-        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, lt, &value, controller->hid.preparsed, report_buf, report_len);
+        status = HidP_GetUsageValue(HidP_Input, HID_USAGE_PAGE_GENERIC, 0, lt, &value, controller->hid.preparsed, parse_buf, report_len);
         if (status != HIDP_STATUS_SUCCESS) WARN("HidP_GetUsageValue left trigger (%#x) returned %#lx\n", lt, status);
         else state.Gamepad.bLeftTrigger = scale_value(value, &controller->hid.lt_caps, 0, 255);
     }
