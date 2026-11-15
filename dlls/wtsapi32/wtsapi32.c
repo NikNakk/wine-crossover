@@ -467,8 +467,42 @@ BOOL WINAPI WTSQuerySessionInformationA(HANDLE server, DWORD session_id, WTS_INF
         return FALSE;
     }
 
-    if (class == WTSClientProtocolType || class == WTSConnectState)
+    if (class == WTSClientProtocolType || class == WTSConnectState || class == WTSIsRemoteSession)
         return WTSQuerySessionInformationW(server, session_id, class, (WCHAR **)buffer, count);
+
+    if (class == WTSSessionInfoEx)
+    {
+        DWORD size;
+        WTSINFOEXA *info;
+        WTSINFOEXW *infoW;
+        WTSINFOEX_LEVEL1_A *level1;
+        WTSINFOEX_LEVEL1_W *level1W;
+
+        if (!WTSQuerySessionInformationW(server, session_id, class, (WCHAR **)&infoW, &size))
+            return FALSE;
+
+        if (!(info = calloc(1, sizeof(*info))))
+        {
+            WTSFreeMemory(infoW);
+            return FALSE;
+        }
+        level1 = &info->Data.WTSInfoExLevel1;
+        level1W = &infoW->Data.WTSInfoExLevel1;
+        info->Level = infoW->Level;
+        level1->SessionId = level1W->SessionId;
+        level1->SessionState = level1W->SessionState;
+        level1->SessionFlags = level1W->SessionFlags;
+        WideCharToMultiByte(CP_ACP, 0, level1W->WinStationName, -1, level1->WinStationName,
+                            sizeof(level1->WinStationName), NULL, NULL);
+        WideCharToMultiByte(CP_ACP, 0, level1W->UserName, -1, level1->UserName, sizeof(level1->UserName), NULL, NULL);
+        WideCharToMultiByte(CP_ACP, 0, level1W->DomainName, -1, level1->DomainName, sizeof(level1->DomainName),
+                            NULL, NULL);
+        level1->CurrentTime = level1W->CurrentTime;
+        WTSFreeMemory(infoW);
+        *buffer = (char *)info;
+        *count = sizeof(*info);
+        return TRUE;
+    }
 
     if (class == WTSSessionInfo)
     {
@@ -630,6 +664,49 @@ BOOL WINAPI WTSQuerySessionInformationW(HANDLE server, DWORD session_id, WTS_INF
         /* TODO: fill remaining timestamps with real data */
         *buffer = (WCHAR *)info;
         *count = sizeof(*info);
+        return TRUE;
+    }
+
+    if (class == WTSSessionInfoEx)
+    {
+        WTSINFOEXW *info;
+        WTSINFOEX_LEVEL1_W *level1;
+        FILETIME ft;
+        DWORD size;
+
+        if (!(info = calloc(1, sizeof(*info)))) return FALSE;
+        FIXME("returning partial WTSINFOEX\n");
+        info->Level = 1;
+        level1 = &info->Data.WTSInfoExLevel1;
+        if (!ProcessIdToSessionId(GetCurrentProcessId(), &level1->SessionId))
+        {
+            free(info);
+            return FALSE;
+        }
+        /* The local console session, which is never locked. */
+        level1->SessionState = WTSActive;
+        level1->SessionFlags = WTS_SESSIONSTATE_UNLOCK;
+        wcscpy(level1->WinStationName, L"Console");
+        size = ARRAY_SIZE(level1->UserName);
+        GetUserNameW(level1->UserName, &size);
+        size = ARRAY_SIZE(level1->DomainName);
+        GetComputerNameW(level1->DomainName, &size);
+        GetSystemTimeAsFileTime(&ft);
+        level1->CurrentTime.LowPart = ft.dwLowDateTime;
+        level1->CurrentTime.HighPart = ft.dwHighDateTime;
+        *buffer = (WCHAR *)info;
+        *count = sizeof(*info);
+        return TRUE;
+    }
+
+    if (class == WTSIsRemoteSession)
+    {
+        BOOLEAN *remote;
+
+        if (!(remote = malloc(sizeof(*remote)))) return FALSE;
+        *remote = FALSE;
+        *buffer = (WCHAR *)remote;
+        *count = sizeof(*remote);
         return TRUE;
     }
 
